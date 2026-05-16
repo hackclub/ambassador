@@ -30,7 +30,7 @@
     "next": "16.2.6",
     "next-intl": "^4.9.2",
     "pdf-lib": "^1.17.1",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.10",
     "postgres": "^3.4.9",
     "postgres-shift": "^0.1.0",
     "qrcode": "^1.5.4",
