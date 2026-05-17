@@ -12,8 +12,8 @@
     "color": { "x": 471, "y": 36, "size": 119 },
     "bw": { "x": 471, "y": 36, "size": 119 },
     "printer_efficient": { "x": 471, "y": 36, "size": 119 },
-    "a4": { "x": 454, "y": 56, "size": 119 },
-    "a4_bw": { "x": 454, "y": 56, "size": 119 }
+    "a4": { "x": 455, "y": 56, "size": 119 },
+    "a4_bw": { "x": 455, "y": 56, "size": 119 }
   },
   "referralTextCoordinates": {
     "color": { "x": 531, "y": 18, "size": 8, "color": "000000" },
