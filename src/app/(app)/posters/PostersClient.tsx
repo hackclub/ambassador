@@ -1174,7 +1174,11 @@ function CreateSection({
             <p className="text-sm text-foreground font-medium shrink-0">Poster group</p>
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end">
               <div className="flex flex-col gap-1">
+                <label htmlFor="group-size-input" className="sr-only">
+                  {t("groups.size-label")}
+                </label>
                 <Input
+                  id="group-size-input"
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
