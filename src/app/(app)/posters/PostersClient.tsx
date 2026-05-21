@@ -125,6 +125,10 @@ function clampGroupSizeInput(value: string) {
   return clampGroupSize(parseGroupSizeInput(value));
 }
 
+function clampPosterAddCountInput(value: string, remaining: number) {
+  return Math.max(1, Math.min(remaining, clampGroupSizeInput(value)));
+}
+
 function isSupportedProofImage(file: File) {
   const type = file.type.trim().toLowerCase();
   if (type && SUPPORTED_PROOF_IMAGE_MIME_TYPES.has(type)) {
@@ -469,7 +473,7 @@ function GroupCard({
   onRefresh: () => void;
 }) {
   const t = useTranslations("posters");
-  const [addCount, setAddCount] = useState(1);
+  const [addCountInput, setAddCountInput] = useState("1");
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(group.name ?? "");
   const [renameBusy, setRenameBusy] = useState(false);
@@ -482,6 +486,12 @@ function GroupCard({
   const canDeleteGroup = !hasVerifiedPosters && scanCount === 0;
   const remaining = Math.max(0, 20 - group.posters.length);
   const displayName = group.name !== null && group.name.trim() !== "" ? group.name : t("groups.unnamed");
+  const trimmedAddCountInput = addCountInput.trim();
+  const parsedAddCountInput = parseGroupSizeInput(addCountInput);
+  const addCountNeedsCorrection =
+    trimmedAddCountInput !== "" &&
+    (parsedAddCountInput === null || parsedAddCountInput < 1 || parsedAddCountInput > remaining);
+  const correctedAddCount = clampPosterAddCountInput(addCountInput, remaining);
 
   useEffect(() => {
     if (editingName) {
@@ -601,20 +611,40 @@ function GroupCard({
       </div>
 
       {remaining > 0 ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Input
-            type="number"
-            min={1}
-            max={remaining}
-            value={addCount}
-            onChange={(event) => setAddCount(Math.max(1, Math.min(remaining, Number(event.target.value) || 1)))}
-            aria-label="How many posters to add?"
-            className="w-16 flex-none"
-          />
+        <div className="mt-3 flex flex-wrap items-start gap-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`group-add-count-${group.id}`} className="sr-only">
+              How many posters to add?
+            </label>
+            <Input
+              id={`group-add-count-${group.id}`}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={addCountInput}
+              onChange={(event) => setAddCountInput(event.target.value)}
+              onBlur={(event) => setAddCountInput(String(clampPosterAddCountInput(event.currentTarget.value, remaining)))}
+              aria-invalid={addCountNeedsCorrection ? "true" : "false"}
+              aria-describedby={`group-add-count-help-${group.id}`}
+              className="w-16 flex-none"
+            />
+            <p
+              id={`group-add-count-help-${group.id}`}
+              className={cn("text-xs", addCountNeedsCorrection ? "text-destructive" : "text-muted-foreground")}
+            >
+              {addCountNeedsCorrection
+                ? t("group-card.add-invalid", { remaining, count: correctedAddCount })
+                : t("group-card.add-help", { remaining })}
+            </p>
+          </div>
           <Button
             type="button"
             size="app-sm"
-            onClick={() => onAddPosters(addCount)}
+            onClick={() => {
+              const count = clampPosterAddCountInput(addCountInput, remaining);
+              setAddCountInput(String(count));
+              onAddPosters(count);
+            }}
             disabled={busy}
           >
             {t("group-card.add-button", { remaining })}

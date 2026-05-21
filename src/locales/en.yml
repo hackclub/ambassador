@@ -151,6 +151,8 @@ posters:
     new: New posters
   group-card:
     add-button: "Add posters ({remaining} allowed)"
+    add-help: Enter a whole number from 1 to {remaining}.
+    add-invalid: Use a whole number from 1 to {remaining}. The value will be adjusted to {count}.
   capture:
     title: Snap the QR code
     body: Point your camera at the poster and make sure the entire poster and especially the QR code are clearly visible, then capture.
