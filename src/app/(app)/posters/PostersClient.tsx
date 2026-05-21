@@ -1163,6 +1163,8 @@ function CreateSection({
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end">
               <Input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 min={1}
                 max={20}
                 value={groupSizeInput}
