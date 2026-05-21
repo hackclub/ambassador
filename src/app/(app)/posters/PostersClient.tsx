@@ -110,6 +110,25 @@ const SUPPORTED_PROOF_IMAGE_MIME_TYPES = new Set([
 ]);
 const SUPPORTED_PROOF_IMAGE_FORMATS = "PNG, JPG, HEIC, WebP";
 
+function parseGroupSizeInput(value: string) {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  return Number.parseInt(trimmed, 10);
+}
+
+function clampGroupSize(parsed: number | null) {
+  if (parsed === null) return 1;
+  return Math.max(1, Math.min(20, parsed));
+}
+
+function clampGroupSizeInput(value: string) {
+  return clampGroupSize(parseGroupSizeInput(value));
+}
+
+function clampPosterAddCountInput(value: string, remaining: number) {
+  return Math.max(1, Math.min(remaining, clampGroupSizeInput(value)));
+}
+
 function isSupportedProofImage(file: File) {
   const type = file.type.trim().toLowerCase();
   if (type && SUPPORTED_PROOF_IMAGE_MIME_TYPES.has(type)) {
@@ -137,7 +156,7 @@ export function PostersClient({
   const [colorMode, setColorMode] = useState<ColorMode>("color");
   const [posterName, setPosterName] = useState("");
   const [groupName, setGroupName] = useState("");
-  const [groupSize, setGroupSize] = useState(3);
+  const [groupSizeInput, setGroupSizeInput] = useState("3");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verifyTarget, setVerifyTarget] = useState<VerifyTarget | null>(null);
@@ -211,6 +230,8 @@ export function PostersClient({
 
   const createGroup = useCallback(async () => {
     if (campaignSlug === null) return;
+    const count = clampGroupSizeInput(groupSizeInput);
+    setGroupSizeInput(String(count));
     setBusy(true);
     setError(null);
     try {
@@ -220,7 +241,7 @@ export function PostersClient({
         body: JSON.stringify({
           campaignSlug,
           posterType,
-          count: groupSize,
+          count,
           name: groupName.trim() || null,
         }),
       });
@@ -228,14 +249,14 @@ export function PostersClient({
         throw new Error(await response.text());
       }
       setGroupName("");
-      setGroupSize(3);
+      setGroupSizeInput("3");
       await refresh();
     } catch {
       setError(t("errors.create-failed"));
     } finally {
       setBusy(false);
     }
-  }, [campaignSlug, posterType, groupSize, groupName, refresh, t]);
+  }, [campaignSlug, posterType, groupSizeInput, groupName, refresh, t]);
 
   const addPostersToGroup = useCallback(async (groupId: string, count: number) => {
     setBusy(true);
@@ -329,8 +350,8 @@ export function PostersClient({
             setPosterName={setPosterName}
             groupName={groupName}
             setGroupName={setGroupName}
-            groupSize={groupSize}
-            setGroupSize={setGroupSize}
+            groupSizeInput={groupSizeInput}
+            setGroupSizeInput={setGroupSizeInput}
             busy={busy}
             createPoster={createPoster}
             createGroup={createGroup}
@@ -452,7 +473,7 @@ function GroupCard({
   onRefresh: () => void;
 }) {
   const t = useTranslations("posters");
-  const [addCount, setAddCount] = useState(1);
+  const [addCountInput, setAddCountInput] = useState("1");
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(group.name ?? "");
   const [renameBusy, setRenameBusy] = useState(false);
@@ -465,6 +486,12 @@ function GroupCard({
   const canDeleteGroup = !hasVerifiedPosters && scanCount === 0;
   const remaining = Math.max(0, 20 - group.posters.length);
   const displayName = group.name !== null && group.name.trim() !== "" ? group.name : t("groups.unnamed");
+  const trimmedAddCountInput = addCountInput.trim();
+  const parsedAddCountInput = parseGroupSizeInput(addCountInput);
+  const addCountNeedsCorrection =
+    trimmedAddCountInput !== "" &&
+    (parsedAddCountInput === null || parsedAddCountInput < 1 || parsedAddCountInput > remaining);
+  const correctedAddCount = clampPosterAddCountInput(addCountInput, remaining);
 
   useEffect(() => {
     if (editingName) {
@@ -584,20 +611,40 @@ function GroupCard({
       </div>
 
       {remaining > 0 ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Input
-            type="number"
-            min={1}
-            max={remaining}
-            value={addCount}
-            onChange={(event) => setAddCount(Math.max(1, Math.min(remaining, Number(event.target.value) || 1)))}
-            aria-label="How many posters to add?"
-            className="w-16 flex-none"
-          />
+        <div className="mt-3 flex flex-wrap items-start gap-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`group-add-count-${group.id}`} className="sr-only">
+              How many posters to add?
+            </label>
+            <Input
+              id={`group-add-count-${group.id}`}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={addCountInput}
+              onChange={(event) => setAddCountInput(event.target.value)}
+              onBlur={(event) => setAddCountInput(String(clampPosterAddCountInput(event.currentTarget.value, remaining)))}
+              aria-invalid={addCountNeedsCorrection ? "true" : "false"}
+              aria-describedby={`group-add-count-help-${group.id}`}
+              className="w-16 flex-none"
+            />
+            <p
+              id={`group-add-count-help-${group.id}`}
+              className={cn("text-xs", addCountNeedsCorrection ? "text-destructive" : "text-muted-foreground")}
+            >
+              {addCountNeedsCorrection
+                ? t("group-card.add-invalid", { remaining, count: correctedAddCount })
+                : t("group-card.add-help", { remaining })}
+            </p>
+          </div>
           <Button
             type="button"
             size="app-sm"
-            onClick={() => onAddPosters(addCount)}
+            onClick={() => {
+              const count = clampPosterAddCountInput(addCountInput, remaining);
+              setAddCountInput(String(count));
+              onAddPosters(count);
+            }}
             disabled={busy}
           >
             {t("group-card.add-button", { remaining })}
@@ -1050,8 +1097,8 @@ function CreateSection({
   setPosterName,
   groupName,
   setGroupName,
-  groupSize,
-  setGroupSize,
+  groupSizeInput,
+  setGroupSizeInput,
   busy,
   createPoster,
   createGroup,
@@ -1071,13 +1118,19 @@ function CreateSection({
   setPosterName: (value: string) => void;
   groupName: string;
   setGroupName: (value: string) => void;
-  groupSize: number;
-  setGroupSize: (value: number) => void;
+  groupSizeInput: string;
+  setGroupSizeInput: (value: string) => void;
   busy: boolean;
   createPoster: () => void;
   createGroup: () => void;
 }) {
   const t = useTranslations("posters");
+  const trimmedGroupSizeInput = groupSizeInput.trim();
+  const parsedGroupSizeInput = parseGroupSizeInput(groupSizeInput);
+  const groupSizeNeedsCorrection =
+    trimmedGroupSizeInput !== "" &&
+    (parsedGroupSizeInput === null || parsedGroupSizeInput < 1 || parsedGroupSizeInput > 20);
+  const correctedGroupSize = clampGroupSize(parsedGroupSizeInput);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-start">
@@ -1153,15 +1206,31 @@ function CreateSection({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-foreground font-medium shrink-0">Poster group</p>
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end">
-              <Input
-                type="number"
-                min={1}
-                max={20}
-                value={groupSize}
-                onChange={(event) => setGroupSize(Math.max(1, Math.min(20, Number(event.target.value) || 1)))}
-                aria-label={t("groups.size-label")}
-                className="w-16 flex-none"
-              />
+              <div className="flex flex-col gap-1">
+                <label htmlFor="group-size-input" className="sr-only">
+                  {t("groups.size-label")}
+                </label>
+                <Input
+                  id="group-size-input"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={groupSizeInput}
+                  onChange={(event) => setGroupSizeInput(event.target.value)}
+                  onBlur={(event) => setGroupSizeInput(String(clampGroupSizeInput(event.currentTarget.value)))}
+                  aria-invalid={groupSizeNeedsCorrection ? "true" : "false"}
+                  aria-describedby="group-size-help"
+                  className="w-16 flex-none"
+                />
+                <p
+                  id="group-size-help"
+                  className={cn("text-xs", groupSizeNeedsCorrection ? "text-destructive" : "text-muted-foreground")}
+                >
+                  {groupSizeNeedsCorrection
+                    ? t("groups.size-invalid", { count: correctedGroupSize })
+                    : t("groups.size-help")}
+                </p>
+              </div>
               <Input
                 value={groupName}
                 onChange={(event) => setGroupName(event.target.value)}
