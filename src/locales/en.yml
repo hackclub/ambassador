@@ -199,7 +199,7 @@ posters:
     name-placeholder: Group name (optional)
     size-label: How many posters?
     size-help: Enter a whole number from 1 to 20.
-    size-invalid: Use a whole number from 1 to 20. We will submit {count} posters.
+    size-invalid: Use a whole number from 1 to 20. The value will be adjusted to {count}.
   singles:
     title: Standalone posters
     empty: No standalone posters yet.

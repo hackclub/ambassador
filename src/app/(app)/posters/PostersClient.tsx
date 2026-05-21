@@ -1185,7 +1185,6 @@ function CreateSection({
                   value={groupSizeInput}
                   onChange={(event) => setGroupSizeInput(event.target.value)}
                   onBlur={(event) => setGroupSizeInput(String(clampGroupSizeInput(event.currentTarget.value)))}
-                  aria-label={t("groups.size-label")}
                   aria-invalid={groupSizeNeedsCorrection ? "true" : "false"}
                   aria-describedby="group-size-help"
                   className="w-16 flex-none"
