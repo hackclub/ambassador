@@ -614,7 +614,7 @@ function GroupCard({
         <div className="mt-3 flex flex-wrap items-start gap-2">
           <div className="flex flex-col gap-1">
             <label htmlFor={`group-add-count-${group.id}`} className="sr-only">
-              How many posters to add?
+              {t("group-card.add-count-label")}
             </label>
             <Input
               id={`group-add-count-${group.id}`}
