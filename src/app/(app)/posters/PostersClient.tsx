@@ -110,9 +110,15 @@ const SUPPORTED_PROOF_IMAGE_MIME_TYPES = new Set([
 ]);
 const SUPPORTED_PROOF_IMAGE_FORMATS = "PNG, JPG, HEIC, WebP";
 
+function parseGroupSizeInput(value: string) {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  return Number.parseInt(trimmed, 10);
+}
+
 function clampGroupSizeInput(value: string) {
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed)) return 1;
+  const parsed = parseGroupSizeInput(value);
+  if (parsed === null) return 1;
   return Math.max(1, Math.min(20, parsed));
 }
 
@@ -1086,6 +1092,12 @@ function CreateSection({
   createGroup: () => void;
 }) {
   const t = useTranslations("posters");
+  const trimmedGroupSizeInput = groupSizeInput.trim();
+  const parsedGroupSizeInput = parseGroupSizeInput(groupSizeInput);
+  const groupSizeNeedsCorrection =
+    trimmedGroupSizeInput !== "" &&
+    (parsedGroupSizeInput === null || parsedGroupSizeInput < 1 || parsedGroupSizeInput > 20);
+  const correctedGroupSize = clampGroupSizeInput(groupSizeInput);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-start">
@@ -1161,18 +1173,28 @@ function CreateSection({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-foreground font-medium shrink-0">Poster group</p>
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end">
-              <Input
-                type="number"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                min={1}
-                max={20}
-                value={groupSizeInput}
-                onChange={(event) => setGroupSizeInput(event.target.value)}
-                onBlur={() => setGroupSizeInput(String(clampGroupSizeInput(groupSizeInput)))}
-                aria-label={t("groups.size-label")}
-                className="w-16 flex-none"
-              />
+              <div className="flex flex-col gap-1">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={groupSizeInput}
+                  onChange={(event) => setGroupSizeInput(event.target.value)}
+                  onBlur={(event) => setGroupSizeInput(String(clampGroupSizeInput(event.currentTarget.value)))}
+                  aria-label={t("groups.size-label")}
+                  aria-invalid={groupSizeNeedsCorrection || undefined}
+                  aria-describedby="group-size-help"
+                  className="w-16 flex-none"
+                />
+                <p
+                  id="group-size-help"
+                  className={cn("text-xs", groupSizeNeedsCorrection ? "text-destructive" : "text-muted-foreground")}
+                >
+                  {groupSizeNeedsCorrection
+                    ? t("groups.size-invalid", { count: correctedGroupSize })
+                    : t("groups.size-help")}
+                </p>
+              </div>
               <Input
                 value={groupName}
                 onChange={(event) => setGroupName(event.target.value)}

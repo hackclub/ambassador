@@ -198,6 +198,8 @@ posters:
     unnamed: Untitled group
     name-placeholder: Group name (optional)
     size-label: How many posters?
+    size-help: Enter a whole number from 1 to 20.
+    size-invalid: Use a whole number from 1 to 20. We will submit {count} posters.
   singles:
     title: Standalone posters
     empty: No standalone posters yet.
