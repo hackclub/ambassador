@@ -110,6 +110,12 @@ const SUPPORTED_PROOF_IMAGE_MIME_TYPES = new Set([
 ]);
 const SUPPORTED_PROOF_IMAGE_FORMATS = "PNG, JPG, HEIC, WebP";
 
+function clampGroupSizeInput(value: string) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) return 1;
+  return Math.max(1, Math.min(20, parsed));
+}
+
 function isSupportedProofImage(file: File) {
   const type = file.type.trim().toLowerCase();
   if (type && SUPPORTED_PROOF_IMAGE_MIME_TYPES.has(type)) {
@@ -137,7 +143,7 @@ export function PostersClient({
   const [colorMode, setColorMode] = useState<ColorMode>("color");
   const [posterName, setPosterName] = useState("");
   const [groupName, setGroupName] = useState("");
-  const [groupSize, setGroupSize] = useState(3);
+  const [groupSizeInput, setGroupSizeInput] = useState("3");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verifyTarget, setVerifyTarget] = useState<VerifyTarget | null>(null);
@@ -211,6 +217,8 @@ export function PostersClient({
 
   const createGroup = useCallback(async () => {
     if (campaignSlug === null) return;
+    const count = clampGroupSizeInput(groupSizeInput);
+    setGroupSizeInput(String(count));
     setBusy(true);
     setError(null);
     try {
@@ -220,7 +228,7 @@ export function PostersClient({
         body: JSON.stringify({
           campaignSlug,
           posterType,
-          count: groupSize,
+          count,
           name: groupName.trim() || null,
         }),
       });
@@ -228,14 +236,14 @@ export function PostersClient({
         throw new Error(await response.text());
       }
       setGroupName("");
-      setGroupSize(3);
+      setGroupSizeInput("3");
       await refresh();
     } catch {
       setError(t("errors.create-failed"));
     } finally {
       setBusy(false);
     }
-  }, [campaignSlug, posterType, groupSize, groupName, refresh, t]);
+  }, [campaignSlug, posterType, groupSizeInput, groupName, refresh, t]);
 
   const addPostersToGroup = useCallback(async (groupId: string, count: number) => {
     setBusy(true);
@@ -329,8 +337,8 @@ export function PostersClient({
             setPosterName={setPosterName}
             groupName={groupName}
             setGroupName={setGroupName}
-            groupSize={groupSize}
-            setGroupSize={setGroupSize}
+            groupSizeInput={groupSizeInput}
+            setGroupSizeInput={setGroupSizeInput}
             busy={busy}
             createPoster={createPoster}
             createGroup={createGroup}
@@ -1050,8 +1058,8 @@ function CreateSection({
   setPosterName,
   groupName,
   setGroupName,
-  groupSize,
-  setGroupSize,
+  groupSizeInput,
+  setGroupSizeInput,
   busy,
   createPoster,
   createGroup,
@@ -1071,8 +1079,8 @@ function CreateSection({
   setPosterName: (value: string) => void;
   groupName: string;
   setGroupName: (value: string) => void;
-  groupSize: number;
-  setGroupSize: (value: number) => void;
+  groupSizeInput: string;
+  setGroupSizeInput: (value: string) => void;
   busy: boolean;
   createPoster: () => void;
   createGroup: () => void;
@@ -1157,8 +1165,9 @@ function CreateSection({
                 type="number"
                 min={1}
                 max={20}
-                value={groupSize}
-                onChange={(event) => setGroupSize(Math.max(1, Math.min(20, Number(event.target.value) || 1)))}
+                value={groupSizeInput}
+                onChange={(event) => setGroupSizeInput(event.target.value)}
+                onBlur={() => setGroupSizeInput(String(clampGroupSizeInput(groupSizeInput)))}
                 aria-label={t("groups.size-label")}
                 className="w-16 flex-none"
               />
