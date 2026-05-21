@@ -151,6 +151,7 @@ posters:
     new: New posters
   group-card:
     add-button: "Add posters ({remaining} allowed)"
+    add-count-label: How many posters to add?
     add-help: Enter a whole number from 1 to {remaining}.
     add-invalid: Use a whole number from 1 to {remaining}. The value will be adjusted to {count}.
   capture:
