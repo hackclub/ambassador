@@ -116,10 +116,13 @@ function parseGroupSizeInput(value: string) {
   return Number.parseInt(trimmed, 10);
 }
 
-function clampGroupSizeInput(value: string) {
-  const parsed = parseGroupSizeInput(value);
+function clampGroupSize(parsed: number | null) {
   if (parsed === null) return 1;
   return Math.max(1, Math.min(20, parsed));
+}
+
+function clampGroupSizeInput(value: string) {
+  return clampGroupSize(parseGroupSizeInput(value));
 }
 
 function isSupportedProofImage(file: File) {
@@ -1097,7 +1100,7 @@ function CreateSection({
   const groupSizeNeedsCorrection =
     trimmedGroupSizeInput !== "" &&
     (parsedGroupSizeInput === null || parsedGroupSizeInput < 1 || parsedGroupSizeInput > 20);
-  const correctedGroupSize = clampGroupSizeInput(groupSizeInput);
+  const correctedGroupSize = clampGroupSize(parsedGroupSizeInput);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-start">
