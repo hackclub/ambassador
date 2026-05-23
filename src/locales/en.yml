@@ -189,8 +189,8 @@ posters:
     delete: Delete
     delete-poster: "Delete poster {code}"
     delete-group: "Delete group {name}"
-    delete-poster-confirm: "Are you sure you want to delete poster {code}?"
-    delete-group-confirm: "Are you sure you want to delete group {name}?"
+    delete-poster-confirm: "Are you sure you want to delete the {name} poster (ref {code})?"
+    delete-group-confirm: "Are you sure you want to delete the {name} group?"
     rename: Rename
     rename-poster: "Rename poster {code}"
     rename-group: "Rename group {name}"
