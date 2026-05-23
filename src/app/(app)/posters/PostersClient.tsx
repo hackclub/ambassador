@@ -1296,7 +1296,7 @@ function PosterRow({
   async function deletePoster() {
     if (!window.confirm(
   t("actions.delete-poster-confirm", {
-    name: poster.name ?? t("actions.poster"),
+    name: poster.name ?? displayCode,
     code: displayCode,
   }),
 )) {
