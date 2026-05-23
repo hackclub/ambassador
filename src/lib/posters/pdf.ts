@@ -7,8 +7,8 @@ import {
   getPosterRenderConfig,
   resolvePosterTemplatePath,
 } from "@/lib/posters/config";
-import { generateQrCodePng } from "@/lib/posters/qr";
-import type { PosterRow, PosterStyle } from "@/lib/posters/types";
+import { createQrCodeMatrix, generateQrCodePng } from "@/lib/posters/qr";
+import type { PosterRow, PosterStyle, PosterTemplateCoordinates } from "@/lib/posters/types";
 
 function hexToRgb(hexColor: string) {
   const clean = hexColor.replace(/^#/, "");
@@ -16,6 +16,43 @@ function hexToRgb(hexColor: string) {
   const g = Number.parseInt(clean.slice(2, 4), 16) / 255;
   const b = Number.parseInt(clean.slice(4, 6), 16) / 255;
   return rgb(r, g, b);
+}
+
+function shouldDrawVectorQrCode(style: PosterStyle) {
+  return style === "bw" || style === "printer_efficient" || style === "a4_bw";
+}
+
+function drawVectorQrCode(
+  page: ReturnType<PDFDocument["getPage"]>,
+  content: string,
+  config: PosterTemplateCoordinates,
+) {
+  const quietZoneModules = 2;
+  const matrix = createQrCodeMatrix(content);
+  const moduleSize = config.size / (matrix.size + quietZoneModules * 2);
+
+  for (let row = 0; row < matrix.size; row += 1) {
+    let runStart: number | null = null;
+
+    for (let col = 0; col <= matrix.size; col += 1) {
+      const isDark = col < matrix.size && matrix.get(row, col) === 1;
+
+      if (isDark && runStart === null) {
+        runStart = col;
+      }
+
+      if ((!isDark || col === matrix.size) && runStart !== null) {
+        page.drawRectangle({
+          x: config.x + (runStart + quietZoneModules) * moduleSize,
+          y: config.y + config.size - (row + quietZoneModules + 1) * moduleSize,
+          width: (col - runStart) * moduleSize,
+          height: moduleSize,
+          color: rgb(0, 0, 0),
+        });
+        runStart = null;
+      }
+    }
+  }
 }
 
 async function createFallbackPosterPdf(content: string) {
@@ -64,16 +101,20 @@ export async function generatePosterPdf(options: {
   );
   const qrConfig = renderConfig.qr;
   const textConfig = renderConfig.text;
-  const qrPng = await generateQrCodePng(options.content, qrConfig.size);
-  const qrImage = await pdf.embedPng(qrPng);
   const font = await pdf.embedFont(StandardFonts.HelveticaBold);
 
-  page.drawImage(qrImage, {
-    x: qrConfig.x,
-    y: qrConfig.y,
-    width: qrConfig.size,
-    height: qrConfig.size,
-  });
+  if (shouldDrawVectorQrCode(options.style)) {
+    drawVectorQrCode(page, options.content, qrConfig);
+  } else {
+    const qrPng = await generateQrCodePng(options.content, qrConfig.size);
+    const qrImage = await pdf.embedPng(qrPng);
+    page.drawImage(qrImage, {
+      x: qrConfig.x,
+      y: qrConfig.y,
+      width: qrConfig.size,
+      height: qrConfig.size,
+    });
+  }
 
   const referralText = `Ref: ${formatPosterReferralCode(options.referralCode)}`;
   const textWidth = font.widthOfTextAtSize(referralText, textConfig.size);

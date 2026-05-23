@@ -8,6 +8,12 @@ import {
 } from "@/lib/posters/config";
 import type { PosterRow } from "@/lib/posters/types";
 
+export function createQrCodeMatrix(content: string) {
+  return QRCode.create(content, {
+    errorCorrectionLevel: "L",
+  }).modules;
+}
+
 export async function generateQrCodePng(content: string, size: number) {
   return QRCode.toBuffer(content, {
     type: "png",
