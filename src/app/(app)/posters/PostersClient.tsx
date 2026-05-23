@@ -133,7 +133,7 @@ export function PostersClient({
   const router = useRouter();
   const data = initialData;
   const [campaignSlug, setCampaignSlug] = useState<string | null>(initialCampaignSlug);
-  const [paperSize, setPaperSize] = useState<PaperSize>("letter");
+  const [paperSize, setPaperSize] = useState<PaperSize>("a4");
   const [colorMode, setColorMode] = useState<ColorMode>("color");
   const [posterName, setPosterName] = useState("");
   const [groupName, setGroupName] = useState("");
