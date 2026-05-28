@@ -10,6 +10,8 @@ import {
   createPoster,
   createPosterGroup,
   createPostersForGroup,
+  countStardanceReferralsByPosterId,
+  countStardanceReferralsForPoster,
   countUserPosterGroups,
   countUserPosters,
   deletePosterById,
@@ -152,16 +154,17 @@ async function persistPosterDecision(input: {
 }
 
 export async function listPosterDataForUser(userId: string) {
-  const [groups, posters] = await Promise.all([
+  const [groups, posters, referralCounts] = await Promise.all([
     listUserPosterGroups(userId),
     listUserPosters(userId),
+    countStardanceReferralsByPosterId(userId),
   ]);
 
   const groupedPosters = new Map<string, ReturnType<typeof toClientPoster>[]>();
   const standalonePosters: ReturnType<typeof toClientPoster>[] = [];
 
   for (const poster of posters) {
-    const clientPoster = toClientPoster(poster);
+    const clientPoster = toClientPoster(poster, referralCounts.get(poster.id) ?? 0);
     if (poster.poster_group_id !== null) {
       const existing = groupedPosters.get(poster.poster_group_id) ?? [];
       existing.push(clientPoster);
@@ -343,6 +346,9 @@ export async function deletePosterForUser(userId: string, posterId: string) {
   if (poster.verification_status === "success") {
     throw new PosterRequestError("Accepted posters cannot be deleted.", 400);
   }
+  if ((await countStardanceReferralsForPoster(poster)) > 0) {
+    throw new PosterRequestError("Posters with referrals cannot be deleted.", 400);
+  }
 
   await deletePosterById(poster.id);
   return { poster };
@@ -352,6 +358,12 @@ export async function deletePosterGroupForUser(userId: string, groupId: string) 
   const { group, posters } = await getPosterGroupForUserOrThrow(userId, groupId);
   if (posters.some((poster) => poster.verification_status === "success")) {
     throw new PosterRequestError("Poster groups with accepted posters cannot be deleted.", 400);
+  }
+  const referralCounts = await Promise.all(
+    posters.map((poster) => countStardanceReferralsForPoster(poster)),
+  );
+  if (referralCounts.some((count) => count > 0)) {
+    throw new PosterRequestError("Poster groups with referrals cannot be deleted.", 400);
   }
 
   await deletePosterGroupById(group.id);

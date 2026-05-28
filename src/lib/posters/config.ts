@@ -199,17 +199,20 @@ export function getPosterRenderConfig(
 
 export function normalizePosterReferralCode(referralCode: string) {
   const trimmed = referralCode.trim();
-  const prefixedCode = /^a[!-]?([a-z0-9]{5})$/i.exec(trimmed);
-  if (prefixedCode?.[1] !== undefined) {
-    return prefixedCode[1].toLowerCase();
+  const legacyStardanceCode = /^a[!-]?([a-z0-9]{5})$/i.exec(trimmed);
+  if (legacyStardanceCode?.[1] !== undefined) {
+    return `a-${legacyStardanceCode[1].toLowerCase()}`;
   }
 
-  return /^[a-z0-9]{5}$/i.test(trimmed) ? trimmed.toLowerCase() : trimmed;
+  if (/^[a-z0-9]{5}$/i.test(trimmed)) {
+    return `a-${trimmed.toLowerCase()}`;
+  }
+
+  return trimmed;
 }
 
 export function formatPosterReferralCode(referralCode: string) {
-  const code = normalizePosterReferralCode(referralCode);
-  return /^[a-z0-9]{5}$/.test(code) ? `a-${code}` : code;
+  return referralCode.trim();
 }
 
 export function buildPosterReferralUrl(referralCode: string) {
@@ -217,7 +220,7 @@ export function buildPosterReferralUrl(referralCode: string) {
 }
 
 export function buildPosterScanUrl(referralCode: string) {
-  return `https://stardance.space/${formatPosterReferralCode(referralCode)}`;
+  return `https://stardance.space/${normalizePosterReferralCode(referralCode)}`;
 }
 
 export type PosterRegionInfo = {
@@ -347,6 +350,7 @@ export function listPosterCampaigns(): PosterCampaignSummary[] {
   return [...seen.values()].sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
-export function buildPosterRedirectUrl(referralCode: string, _campaignSlug: string) {
-  return `https://stardance.space/${formatPosterReferralCode(referralCode)}`;
+export function buildPosterRedirectUrl(referralCode: string, campaignSlug: string) {
+  void campaignSlug;
+  return `https://stardance.space/${normalizePosterReferralCode(referralCode)}`;
 }

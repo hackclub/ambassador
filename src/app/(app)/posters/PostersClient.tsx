@@ -65,8 +65,7 @@ function variantLabel(color: ColorMode, regionName: string | null) {
 }
 
 function formatPosterCode(code: string) {
-  const normalized = code.trim().toLowerCase();
-  return /^[a-z0-9]{5}$/.test(normalized) ? `a-${normalized}` : code;
+  return code;
 }
 
 function canDeletePoster(poster: ClientPoster) {
@@ -1118,7 +1117,12 @@ function PosterTreeItem({
   }
 
   async function deletePoster() {
-    if (!window.confirm(t("actions.delete-poster-confirm", { code: displayCode }))) {
+    if (!window.confirm(
+      t("actions.delete-poster-confirm", {
+        name: poster.name ?? displayCode,
+        code: displayCode,
+      }),
+    )) {
       return;
     }
     setBusy(true);

@@ -296,6 +296,51 @@ export async function listUserPosters(userId: string) {
   `;
 }
 
+export async function countStardanceReferralsByPosterId(userId: string) {
+  const rows = await sql<{ poster_id: string; count: string }[]>`
+    SELECT p.id AS poster_id, COUNT(r.id)::text AS count
+    FROM posters p
+    LEFT JOIN stardance_referral_codes c
+      ON c.user_id = p.user_id
+      AND (
+        LOWER(c.code) = LOWER(p.referral_code)
+        OR (
+          c.code ~ '^[a-z0-9]{5}$'
+          AND p.referral_code ~ '^a-[a-z0-9]{5}$'
+          AND 'a-' || LOWER(c.code) = LOWER(p.referral_code)
+        )
+      )
+    LEFT JOIN stardance_referrals r ON r.referral_code_id = c.id
+    WHERE p.user_id = ${userId}
+    GROUP BY p.id
+  `;
+
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    counts.set(row.poster_id, Number.parseInt(row.count, 10));
+  }
+  return counts;
+}
+
+export async function countStardanceReferralsForPoster(poster: PosterRow) {
+  const row = (await sql<{ count: string }[]>`
+    SELECT COUNT(r.id)::text AS count
+    FROM stardance_referral_codes c
+    JOIN stardance_referrals r ON r.referral_code_id = c.id
+    WHERE c.user_id = ${poster.user_id}
+      AND (
+        LOWER(c.code) = LOWER(${poster.referral_code})
+        OR (
+          c.code ~ '^[a-z0-9]{5}$'
+          AND ${poster.referral_code} ~ '^a-[a-z0-9]{5}$'
+          AND 'a-' || LOWER(c.code) = LOWER(${poster.referral_code})
+        )
+      )
+  `).at(0);
+
+  return Number.parseInt(row?.count ?? "0", 10);
+}
+
 export async function countUserPosters(userId: string) {
   const row = (await sql<{ count: string }[]>`
     SELECT COUNT(*)::text AS count
