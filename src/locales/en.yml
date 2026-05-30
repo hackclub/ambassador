@@ -199,6 +199,8 @@ posters:
     rename-cancel: Cancel
     rename-placeholder: Poster name
     move-poster: "Drag poster {code} to a group"
+    view-location: "View poster {code} location on Google Maps"
+    view-location-short: View location
   groups:
     title: Poster groups
     empty: No groups yet. Create one to bundle multiple posters.

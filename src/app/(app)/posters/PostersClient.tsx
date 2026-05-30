@@ -1,7 +1,7 @@
 "use client";
 
 import Icon from "@hackclub/icons";
-import { Check, ChevronDown, Pencil, Search, SwitchCamera, Trash2 } from "lucide-react";
+import { Check, ChevronDown, MapPin, Pencil, Search, SwitchCamera, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -72,6 +72,13 @@ function canDeletePoster(poster: ClientPoster) {
   return poster.verification_status !== "success" && poster.scanCount === 0;
 }
 
+function getPosterMapsUrl(poster: ClientPoster) {
+  if (poster.verification_status !== "success") return null;
+  if (poster.latitude === null || poster.longitude === null) return null;
+  if (!Number.isFinite(poster.latitude) || !Number.isFinite(poster.longitude)) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${poster.latitude},${poster.longitude}`;
+}
+
 type ClientPoster = {
   id: string;
   referral_code: string;
@@ -80,6 +87,8 @@ type ClientPoster = {
   campaign_slug: string;
   poster_group_id: string | null;
   location_description: string | null;
+  latitude: number | null;
+  longitude: number | null;
   name: string | null;
   scanCount: number;
 };
@@ -1205,6 +1214,23 @@ function PosterTreeItem({
             >
               <Icon glyph="download" size={17} />
             </a>
+            {(() => {
+              const mapsUrl = getPosterMapsUrl(poster);
+              if (mapsUrl === null) return null;
+              return (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-slot="icon-link"
+                  className="inline-flex size-7 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label={t("actions.view-location", { code: displayCode })}
+                  title={t("actions.view-location", { code: displayCode })}
+                >
+                  <MapPin size={16} />
+                </a>
+              );
+            })()}
             <button
               type="button"
               data-slot="icon-link"
@@ -1381,6 +1407,24 @@ function PosterRow({
             <Icon glyph="download" size={20} />
             {t("actions.download")}
           </a>
+          {(() => {
+            const mapsUrl = getPosterMapsUrl(poster);
+            if (mapsUrl === null) return null;
+            return (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-slot="icon-link"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={t("actions.view-location", { code: displayCode })}
+                title={t("actions.view-location", { code: displayCode })}
+              >
+                <MapPin size={16} />
+                {t("actions.view-location-short")}
+              </a>
+            );
+          })()}
           <button
             type="button"
             data-slot="icon-link"
