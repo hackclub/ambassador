@@ -1,0 +1,1213 @@
+locale:
+  html-lang: vi
+  date-format-locale: vi-VN
+
+app:
+  metadata:
+    title: Stardance Ambassador
+    description: Xây dựng và dẫn dắt cộng đồng Hack Club tại thành phố của bạn. Tổ chức các sự kiện địa phương, kết nối các hacker và truyền cảm hứng cho nhiều bạn trẻ học lập trình hơn.
+  login:
+    metadata:
+      title: Đăng nhập
+    title: Rất vui được gặp bạn
+    desc: Đăng nhập hoặc đăng ký bên dưới.
+    login: Đăng nhập
+    or: hoặc
+    sign-up: Đăng ký
+    waving-hand-alt: Bàn tay vẫy chào
+    email-placeholder: Email
+    alt-login-prefix: Hoặc..
+    alt-login-link: Đăng nhập bằng Hack Club
+  navbar:
+    logo-alt: Ambassador
+    admin-link: Admin
+    posters-link: Poster
+    referrals-link: Giới thiệu
+    balance-label: Xem số dư và các khoản chi trả
+    settings-label: Cài đặt
+    sign-out-label: Đăng xuất
+  impersonation:
+    label: đang đóng vai
+    active: "{name}"
+    stop: Dừng
+    stopping: Đang dừng...
+    stop-error: Không thể dừng
+
+dev-admin-selector:
+  label: bộ chọn dev/admin
+  states:
+    apply: Nộp đơn
+    ineligible: Khu vực không đủ điều kiện
+    pending-checks: Đang chờ (kiểm tra ID)
+    pending: Đang chờ (xét duyệt)
+    approved: Đã duyệt
+    accepted-not-onboarded: Đã duyệt nhưng chưa onboarding
+    accepted-onboarding-submitted: Đã duyệt, đã gửi onboarding
+    accepted-pending-signature: Đã duyệt, đang chờ ký
+    accepted-onboarding-completed: Đã duyệt, hoàn tất onboarding
+    accepted-grant-failed: Đã duyệt nhưng cấp grant thất bại
+    rejected: Bị từ chối
+    banned: Đơn đăng ký đã đóng
+
+dashboard:
+  metadata:
+    title: Bảng điều khiển
+  heading: "Chào {name}!"
+  mock-onboarding-alert:
+    title: "Ghi đè của admin:"
+    body: "Bạn chưa có bản ghi onboarding được liên kết, nên giao diện này sử dụng dữ liệu onboarding giả lập. {hcbEmail} thay thế cho hcb_email."
+  stepper:
+    apply: Nộp đơn
+    verify: Xác minh ID
+    review: Xét duyệt
+    decision: Quyết định
+  ineligible-region:
+    eyebrow: Không khả dụng
+    title: Đơn đăng ký không mở tại khu vực của bạn
+    body: "Rất tiếc, chương trình Ambassador hiện chưa khả dụng tại khu vực của bạn. Hãy cập nhật khu vực trong phần cài đặt nếu bạn nghĩ đây là một sai sót."
+    cta: Cập nhật khu vực
+  no-application:
+    eyebrow: Bắt đầu
+    title: Đăng ký trở thành Ambassador
+    body: "Sẵn sàng đại diện cho Stardance của Hack Club? Hãy điền vào một đơn đăng ký nhanh và chúng tôi sẽ xét duyệt."
+    cta: Đăng ký ngay
+  pending:
+    eyebrow: Đang xét duyệt
+    title: Đơn đang chờ xử lý
+    body: "Đơn đăng ký của bạn được gửi vào {date} đang được xét duyệt. Chúng tôi sẽ phản hồi sớm."
+    status: Đang chờ xét duyệt
+  pending-automatic-checks:
+    eyebrow: Còn một bước nữa
+    title: Vui lòng xác minh ID của bạn
+    body: Vui lòng xác minh ID của bạn tại auth.hackclub.com để chúng tôi có thể tiếp tục xử lý đơn của bạn.
+    support: "Trong trường hợp nó không cập nhật sớm (mất từ một phút đến một giờ), hãy gửi email đến ambassadors@hackclub.com để chúng tôi hỗ trợ bạn."
+    cta: Xác minh tại auth.hackclub.com
+  approved:
+    eyebrow: Đã chấp nhận
+    title: Bạn đã là Ambassador!
+    body: Đơn đăng ký của bạn đã được duyệt. Chào mừng đến với đội ngũ!
+    status: Ambassador đang hoạt động
+  onboarding:
+    title: "Hoàn tất onboarding trước:"
+    body-prefix: Hoàn thành
+    body-link: onboarding ambassador
+    body-suffix: để mở khóa office grant và đặt áo thun.
+    cta: Hoàn tất onboarding
+    disabled-title: "Onboarding đang tạm dừng:"
+    disabled-body: Onboarding ambassador tạm thời bị vô hiệu hóa. Chúng tôi sẽ thông báo cho bạn khi nó khả dụng trở lại.
+    status:
+      submitted:
+        title: "Đã gửi onboarding:"
+        body: Cảm ơn bạn đã gửi thông tin onboarding! Bạn sẽ sớm nhận được hợp đồng qua email.
+      pending-signature:
+        title: "Hợp đồng đang chờ ký:"
+        body: Hợp đồng của bạn đang chờ một hoặc nhiều chữ ký. Vui lòng đảm bảo bạn đã ký và kiên nhẫn chờ trong khi chúng tôi xử lý ở phía mình.
+      completed:
+        title: "Hoàn tất onboarding:"
+        body: Onboarding đã xong.
+  rejected:
+    eyebrow: Thử lại
+    title: Đăng ký trở thành Ambassador
+    body: "Đơn đăng ký gần nhất của bạn không được chấp nhận, nhưng bạn có thể gửi một đơn mới và chúng tôi sẽ xét duyệt."
+    cta: Đăng ký lại
+  rejected-permanently:
+    eyebrow: Bị từ chối vĩnh viễn
+    title: Đơn đăng ký đã đóng
+    body: "Đơn đăng ký gần nhất của bạn đã bị từ chối vĩnh viễn. Vui lòng gửi email đến ambassadors@hackclub.com nếu bạn nghĩ đây là sai sót."
+
+office-grant:
+  title: Office grant
+  messages:
+    none: "Hiện chưa có office grant nào được liên kết với tài khoản Ambassador của bạn. Vui lòng gửi tin nhắn trong #hq-ambassadors-support hoặc email đến ambassadors@hackclub.com để chúng tôi hỗ trợ."
+    failed: "Hiện chúng tôi không thể cấp office funds grant cho bạn. Vui lòng gửi tin nhắn trong #hq-ambassadors-support hoặc email đến ambassadors@hackclub.com để chúng tôi hỗ trợ."
+    linked-open-label: Mở grant
+    linked-open-aria: Mở office grant
+  admin-status:
+    linked: Đã liên kết HCB office grant.
+    queued: HCB office grant đã được xếp hàng để cấp.
+    already_linked: Người dùng này đã có một HCB office grant được liên kết.
+    already_pending: "HCB office grant của người dùng này đã đang chờ cấp."
+    not_onboarded: Người dùng này chưa onboarding, nên không có HCB office grant nào được xếp hàng.
+    provision_failed: Yêu cầu HCB office grant thất bại.
+    unlinked: Đã hủy liên kết HCB office grant.
+    invalid: Nhập một grant ID trước khi liên kết.
+    not_found: Không tìm thấy người dùng.
+    link_failed: Không thể liên kết HCB grant đó.
+    unlink_failed: Không thể hủy liên kết HCB grant đó.
+
+posters:
+  metadata:
+    title: Poster
+  heading: Poster
+  subheading: Lan tỏa thông điệp!
+  stats:
+    total: tổng cộng
+    verified: đã xác minh
+    pending: đang chờ
+  scan-prompt:
+    title: "{count, plural, one {# poster} other {# poster}} sẵn sàng để xác minh"
+    body: Hãy treo chúng lên càng sớm càng tốt và sẵn sàng chụp ảnh!
+    cta: Quét một poster
+  sections:
+    new: Poster mới
+    yours: Poster của bạn
+    ungrouped: Chưa phân nhóm
+  group-card:
+    add-button: "Thêm poster (cho phép {remaining})"
+    add-count-label: Thêm bao nhiêu poster?
+    add-help: Nhập một số nguyên từ 1 đến {remaining}.
+    add-invalid: Dùng một số nguyên từ 1 đến {remaining}. Giá trị sẽ được điều chỉnh thành {count}.
+  capture:
+    title: Chụp mã QR
+    body: Hướng camera vào poster và đảm bảo toàn bộ poster, đặc biệt là mã QR, hiển thị rõ ràng, sau đó chụp.
+    capture-button: Chụp
+    flip-camera: Lật camera
+    torch: Bật/tắt đèn flash
+    camera-unavailable: Camera không khả dụng trong trình duyệt này.
+    camera-denied: Không thể truy cập camera. Hãy cho phép truy cập camera và thử lại.
+  campaign:
+    label: Chiến dịch
+    placeholder: Chọn một chiến dịch
+    empty: Chưa có chiến dịch nào khả dụng.
+  styles:
+    color: Đầy đủ màu sắc
+    bw: Đen & trắng
+    printer_efficient: Đen & trắng
+    a4: A4 màu
+    a4_bw: A4 đen trắng
+  actions:
+    create-poster: Poster mới
+    create-group: Nhóm mới
+    download: Tải xuống
+    verify: Xác minh thực tế
+    verify-group: Xác minh nhóm
+    cancel: Hủy
+    submit: Gửi bằng chứng
+    submitting: Đang gửi...
+    use-camera: Chụp ảnh
+    choose-file: Tải lên từ thiết bị
+    retake: Chụp lại
+    refresh-location: Làm mới vị trí
+    delete: Xóa
+    delete-poster: "Xóa poster {code}"
+    delete-group: "Xóa nhóm {name}"
+    delete-poster-confirm: "Bạn có chắc muốn xóa poster {name} (ref {code}) không?"
+    delete-group-confirm: "Bạn có chắc muốn xóa nhóm {name} không?"
+    rename: Đổi tên
+    rename-poster: "Đổi tên poster {code}"
+    rename-group: "Đổi tên nhóm {name}"
+    rename-group-placeholder: Tên nhóm
+    rename-save: Lưu
+    rename-cancel: Hủy
+    rename-placeholder: Tên poster
+    move-poster: "Kéo poster {code} vào một nhóm"
+  groups:
+    title: Nhóm poster
+    empty: Chưa có nhóm nào. Hãy tạo một nhóm để gom nhiều poster lại.
+    count: "{count, plural, one {# poster} other {# poster}}"
+    unnamed: Nhóm chưa đặt tên
+    name-placeholder: Tên nhóm (tùy chọn)
+    size-label: Bao nhiêu poster?
+    size-help: Nhập một số nguyên từ 0 đến 50.
+    size-invalid: Dùng một số nguyên từ 0 đến 50. Giá trị sẽ được điều chỉnh thành {count}.
+  singles:
+    title: Poster độc lập
+    empty: Chưa có poster độc lập nào.
+  poster-card:
+    referral: "Ref {code}"
+  status:
+    pending: Đang chờ
+    in_review: Đang xét duyệt
+    success: Đã xác minh
+    rejected: Bị từ chối
+    digital: Kỹ thuật số
+  verify-modal:
+    eyebrow: Xác minh poster
+    title: Xác minh một poster
+    description: Treo poster lên, chụp một bức ảnh hiển thị mã QR rõ ràng và ghim vị trí của bạn.
+    location-description-label: Mô tả vị trí
+    location-description-placeholder: ví dụ Bảng thông báo ở căng tin trường Lincoln High
+    coordinates: "Tọa độ: {lat}, {lng}"
+    accuracy: "Độ chính xác: ±{meters}m"
+    location-pending: Đang chờ vị trí chính xác...
+    location-error: Chúng tôi không thể lấy vị trí của bạn. Vui lòng cho phép truy cập vị trí chính xác và thử lại.
+    location-retry: Thử lại
+    image-required: Cần có một bức ảnh của poster.
+    auto-detect: Chúng tôi sẽ tự động khớp mã QR với một trong các poster đang chờ của bạn.
+  results:
+    success: Poster đã được xác minh tự động
+    auto_matched: Chúng tôi đã khớp bức ảnh này với một poster đang chờ khác của bạn và đã xác minh nó.
+    already_verified: Poster này đã được xác minh.
+    in_review: Đã gửi để xét duyệt, một người sẽ kiểm tra sớm.
+    no_qr: Chúng tôi không đọc được mã QR. Hãy thử lại với một bức ảnh rõ hơn.
+    no_match: Mã QR không khớp với bất kỳ poster đang chờ nào của bạn.
+  errors:
+    create-failed: Không thể tạo poster.
+    load-failed: Không thể tải poster của bạn.
+    download-failed: Tải xuống thất bại.
+    upload-failed: Không phát hiện được poster nào, vui lòng thử lại!
+    no-qr: Không phát hiện được mã QR, vui lòng thử lại!
+    invalid-image-format: Định dạng ảnh không được hỗ trợ. Dùng {formats}.
+    geolocation-unavailable: Trình duyệt của bạn không hỗ trợ định vị.
+    geolocation-denied: Quyền truy cập vị trí chính xác đã bị từ chối. Vui lòng bật nó trong cài đặt trình duyệt của bạn.
+    rename-failed: Không thể đổi tên poster.
+    rename-group-failed: Không thể đổi tên nhóm.
+    delete-failed: Không thể xóa poster.
+    delete-group-failed: Không thể xóa nhóm.
+    move-failed: Không thể di chuyển poster.
+
+referrals:
+  metadata:
+    title: Giới thiệu
+  heading: Lượt giới thiệu của bạn
+  subheading: Tìm các link giới thiệu của bạn ở đây.
+  codes:
+    heading: Mã giới thiệu
+    description: Bạn cũng có thể tạo thêm các mã giới thiệu và theo dõi chúng tại đây!
+    primary-heading: Chính
+    link-label: Link chia sẻ
+    copy: Sao chép link
+    copied: Đã sao chép
+    copy-aria: Sao chép link chia sẻ
+    rename-aria: Đổi tên mã
+    delete-aria: Xóa mã
+    delete-confirm: Xóa mã giới thiệu này? Nó sẽ chuyển vào kho lưu trữ của bạn. Link vẫn hoạt động và bạn có thể khôi phục bất cứ lúc nào.
+    rename-save: Lưu
+    rename-cancel: Hủy
+    uses: "{count, plural, one {# lượt dùng} other {# lượt dùng}}"
+  archive:
+    heading: Mã đã lưu trữ
+    description: Các mã đã lưu trữ vẫn hoạt động và bạn có thể đưa chúng trở lại danh sách chính bất cứ lúc nào.
+    restore-aria: Khôi phục mã
+  creator:
+    description: Tạo thêm một mã & gắn nhãn cho nó để bạn có thể chia sẻ một link khác ở những nơi khác nhau.
+    label: Nhãn nhóm
+    placeholder: ví dụ Câu lạc bộ Robotics
+    action: Tạo mã
+    creating: Đang tạo...
+  empty:
+    title: Chưa có lượt giới thiệu nào
+    body: Khi ai đó đăng ký qua link của bạn, họ sẽ xuất hiện ở đây cùng với số giờ và trạng thái xác minh của họ.
+  errors:
+    create-failed: Không thể tạo mã giới thiệu.
+    label-required: Cần có nhãn cho mã giới thiệu.
+    rename-failed: Không thể đổi tên mã giới thiệu.
+    delete-failed: Không thể xóa mã giới thiệu.
+    restore-failed: Không thể khôi phục mã giới thiệu.
+  table:
+    name: Tên
+    code: Mã
+    type: Loại
+    type-referral: Giới thiệu
+    type-poster: Poster
+    slack: Slack
+    email: Email
+    hours-logged: Số giờ đã ghi nhận
+    hours-approved: Số giờ đã duyệt
+    verification: Trạng thái
+    filter-label: Tìm kiếm lượt giới thiệu
+    filter-placeholder: Tìm theo mã, tên hoặc email
+    status-filter-label: Lọc theo trạng thái
+    status-filter-all: Tất cả trạng thái
+    no-results: Không có lượt giới thiệu nào khớp với bộ lọc đó.
+    pagination-prev: Trang trước
+    pagination-next: Trang sau
+    pagination-range: "{from}–{to} trong {total}"
+    status:
+      rsvp: RSVP
+      verified: Đã xác minh
+      pending: Đang chờ
+      unverified: Chưa xác minh
+      rejected: Bị từ chối
+
+shirt:
+  heading: Đặt một chiếc áo thun!
+  subheading-main: Một chiếc áo thun hoàn toàn miễn phí, dành riêng cho bạn!
+  subheading-footnote: Thuế hải quan sẽ được áp dụng nếu bạn sống ngoài nước Mỹ, hãy tham khảo thuế nhập khẩu địa phương.
+  unavailable: Sắp ra mắt.. hãy chờ nhé
+  refresh-addresses:
+    body: Làm mới với Hack Club Auth để tải các địa chỉ giao hàng mới nhất của bạn.
+    cta: Làm mới địa chỉ
+  manage-addresses: Quản lý địa chỉ trên Hack Club Auth
+  onboarding:
+    body: Hoàn tất <link>onboarding ambassador</link> trước khi đặt áo thun của bạn.
+  labels:
+    size: Kích cỡ (theo size Mỹ)
+    shipping-address: Địa chỉ giao hàng
+  stock:
+    left: "Còn {count}"
+    out: Hết hàng
+    none: Áo thun hiện đang hết hàng.
+  no-address:
+    body: Bạn chưa có địa chỉ giao hàng nào được lưu. Hãy thêm một địa chỉ trên Hack Club Auth, rồi quay lại đây.
+    cta: Thêm địa chỉ trên Hack Club Auth
+  actions:
+    place: Đặt hàng
+    placing: Đang đặt hàng...
+  order:
+    pending-dispatching: Đang gửi đến kho hàng...
+    pending-hint: Đơn hàng của bạn đang chờ xử lý. Bạn có thể hủy nó ở trạng thái này, nhưng bạn KHÔNG THỂ hủy một khi nó đã được gửi đến kho hàng.
+    cancel-cta: Hủy đơn hàng này
+    cancel-pending: Đang hủy...
+    cancel-confirm: "Hủy đơn đặt áo thun này? Bạn có thể đặt một đơn mới ngay sau đó."
+    cancel-too-late: Quá muộn rồi. Đơn hàng này đã rời đi đến kho hàng và không thể hủy được nữa.
+    cancel-not-cancellable: Đơn hàng này không còn có thể hủy được nữa.
+    approved-title: Đơn hàng đã được duyệt
+    approved-body: "Chiếc áo thun size {size} của bạn đã được gửi đến kho hàng. Theo dõi giao hàng bên dưới."
+    approved-message: "Đơn hàng của bạn đang trên đường giao. Theo dõi giao hàng <link>tại đây</link>."
+    approved-message-no-link: Đơn hàng của bạn đang trên đường giao.
+    rejected-title: Đơn hàng bị từ chối
+    rejected-body: Chúng tôi không thể hoàn tất đơn hàng này. Bạn có thể đặt một đơn áo thun mới bên dưới.
+    failed-title: Đơn hàng thất bại
+    failed-body: Chúng tôi không thể xử lý đơn hàng này. Bạn có thể đặt một đơn áo thun mới bên dưới.
+    cancelled-title: Đơn hàng đã hủy
+    cancelled-body: Đơn hàng này đã bị hủy. Bạn có thể đặt một đơn áo thun mới bên dưới.
+    retryable-warning: 'Đơn hàng gần nhất của bạn bị từ chối vì: "{reason}" nhưng bạn có thể đặt lại!'
+    no-reason: Không có lý do được cung cấp
+    track-cta: Theo dõi trên mail.hackclub.com
+    public-cta: Mở trang đơn hàng công khai
+  errors:
+    generic: Đã xảy ra lỗi.
+    not-ambassador: Chỉ những ambassador đã được duyệt mới có thể đặt áo thun.
+    onboarding-incomplete: Hoàn tất biểu mẫu onboarding ambassador trước khi đặt áo thun của bạn.
+    refresh-addresses: Làm mới với Hack Club Auth, rồi thử lại.
+    refresh-failed-alert: Không thể làm mới các địa chỉ giao hàng của bạn từ Hack Club Auth. Thử lại.
+    unavailable: Đặt áo thun không được bật cho tài khoản này.
+    no-address: Bạn cần có một địa chỉ giao hàng trên Hack Club Auth trước.
+    already-ordered: Bạn đã đặt một chiếc áo thun ambassador rồi.
+    invalid-size: Chọn một kích cỡ hợp lệ.
+    out-of-stock: Size {size} hiện đang hết hàng.
+
+settings:
+  metadata:
+    title: Cài đặt
+  heading: Cài đặt
+  form:
+    labels:
+      name: Tên
+      first-name: Tên
+      last-name: Họ
+      email: Email
+      slack: Slack
+      verification-status: Trạng thái xác minh
+      region: Khu vực
+      auth-hint: Bạn chỉ có thể thay đổi cài đặt này trên cổng Hack Club Auth.
+    actions:
+      save: Lưu
+      saving: Đang lưu...
+      saved: Đã lưu!
+    errors:
+      generic: Đã xảy ra lỗi.
+      unauthorized: Làm mới phiên của bạn và thử lại.
+      invalid-region: Chọn một khu vực hợp lệ.
+
+error-pages:
+  preview:
+    title: Các trang lỗi
+    description: Mở từng route để xem trước và chỉnh sửa trang lỗi đó.
+    not-found: Xem trước trang 404
+    unauthorized: Xem trước trang 401
+    forbidden: Xem trước trang 403
+    internal: Xem trước trang 500
+  not-found:
+    metadata:
+      title: Không tìm thấy trang
+    code: "404"
+    title: Không tìm thấy trang
+    description: Trang bạn yêu cầu không tồn tại hoặc có thể đã được chuyển đi.
+    action: Về trang chủ
+  unauthorized:
+    metadata:
+      title: Chưa được xác thực
+    code: "401"
+    title: Chưa được xác thực
+    description: Phiên của bạn bị thiếu hoặc đã hết hạn. Vui lòng đăng nhập và thử lại.
+    action: Đăng nhập lại
+  forbidden:
+    metadata:
+      title: Bị cấm truy cập
+    code: "403"
+    title: Bị cấm truy cập
+    description: Bạn không có quyền truy cập tài nguyên này.
+    action: Đến bảng điều khiển
+  internal:
+    metadata:
+      title: Đã xảy ra lỗi
+    code: "500"
+    title: Đã xảy ra lỗi
+    description: Một lỗi bất ngờ đã làm gián đoạn trang này.
+    retry: Thử lại
+    action: Về trang chủ
+
+common:
+  empty-value: "-"
+  unknown: Không rõ
+  yes: "Có"
+  no: "Không"
+  latest: Mới nhất
+  history: Lịch sử
+  view: Xem
+  page-fraction: "{page} / {totalPages}"
+  confirm-destructive: Bạn có chắc không? Nếu không, những điều đáng sợ sẽ xảy ra đấy.
+
+status:
+  pending: Đang chờ
+  pending-automatic-checks: Đang chờ
+  pending-review: Đang chờ
+  approved: Đã duyệt
+  accepted: Đã chấp nhận
+  rejected: Bị từ chối
+  rejected-permanent: Bị cấm
+  rejected-permanently: Bị cấm
+  rejected-permenant: Bị cấm
+
+admin:
+  search-placeholder: Tìm theo tên, email hoặc Slack ID...
+  status-filter:
+    all: Tất cả trạng thái
+    none: Không có đơn đăng ký
+    on-hold: Đang tạm giữ
+    pending-automatic-checks: Đang chờ kiểm tra tự động
+    pending-review: Đang chờ xét duyệt
+    accepted: Đã chấp nhận
+    rejected: Bị từ chối
+    rejected-permanently: Bị từ chối vĩnh viễn
+  pagination:
+    previous: Trước
+    next: Sau
+    page: Trang
+  tabs:
+    dashboard: Tổng quan
+    users: Người dùng
+    applications: Đơn đăng ký
+    orders: Đơn hàng
+    audit-log: Audit
+    flags: Flag
+    payouts: Chi trả
+  safeguards:
+    metadata:
+      title: Flag
+    title: Flag
+    columns:
+      toggle: Bật/tắt
+      flag: Flag
+      description: Mô tả
+    errors:
+      update-failed: Không thể cập nhật flag đó.
+      override-failed: Không thể cập nhật ghi đè đó.
+    overrides:
+      heading: Ghi đè người dùng
+      empty: Chưa có ghi đè nào.
+      add-label: Thêm người dùng
+      add-placeholder: Tìm theo tên, email hoặc Slack ID
+      add-button: Thêm
+      candidates-empty: Không có người dùng nào khớp.
+      candidates-loading: Đang tìm...
+      remove-label: Xóa ghi đè
+      remove-confirm: Xóa ghi đè này?
+      not-found: Không tìm thấy người dùng đó.
+      already-exists: Người dùng đó đã có ghi đè này rồi.
+    onboarding:
+      title: Onboarding
+      description: Cho phép các ambassador đã được chấp nhận bắt đầu onboarding từ bảng điều khiển của họ.
+      enable: Bật
+      disable: Tắt
+    shirt-ordering:
+      title: Đặt áo thun
+      description: Cho phép các ambassador đặt đơn áo thun mới.
+      enable: Bật
+      disable: Tắt
+    posters:
+      title: Poster
+      description: Cho phép các ambassador đã được duyệt truy cập tính năng poster.
+      enable: Bật
+      disable: Tắt
+    referrals:
+      title: Giới thiệu
+      description: Cho phép các ambassador đã được duyệt xem mã giới thiệu và số liệu thống kê của họ.
+      enable: Bật
+      disable: Tắt
+    payouts:
+      title: Chi trả
+      description: Cho phép các ambassador yêu cầu chi trả. Số dư, lịch sử và phần xét duyệt của admin vẫn khả dụng dù sao đi nữa; ghi đè theo từng người dùng sẽ mở yêu cầu sớm.
+      enable: Bật
+      disable: Tắt
+  audit-log:
+    metadata:
+      title: Audit log
+    title: Audit log
+    empty: Chưa có sự kiện audit nào được ghi nhận
+    unknown-user: Người dùng không rõ
+    system: Hệ thống
+    event-filter:
+      all: Tất cả sự kiện
+    user-filter:
+      all: Tất cả admin
+      none: Không có admin
+      selection-noun: admin
+      select-all: Chọn tất cả
+      deselect-all: Bỏ chọn tất cả
+    columns:
+      event: Sự kiện
+      actor: Người thực hiện
+      target: Đối tượng
+      details: Chi tiết
+      when: Khi nào
+      open: Mở
+    view-event: Xem sự kiện audit
+    event-detail:
+      metadata:
+        title: Sự kiện audit
+      breadcrumb: Audit log
+      no-details: Không có chi tiết bổ sung nào được ghi nhận.
+      sections:
+        event:
+          title: Sự kiện
+          description: Điều gì đã xảy ra và khi nào nó được ghi nhận.
+        people:
+          title: Mọi người
+          description: Admin đã gây ra sự kiện và người dùng bị ảnh hưởng.
+        details:
+          title: Chi tiết
+          description: Dữ liệu sự kiện dễ đọc được ghi lại cùng với mục audit này.
+      fields:
+        event-id: Event id
+  overview:
+    metadata:
+      title: Tổng quan
+    title: Tổng quan
+    description: Đến giờ xem số liệu rồi..?
+    views:
+      priority: Ưu tiên
+      detailed: Chi tiết
+    priority:
+      region-all: Tất cả khu vực
+      region-us: Hoa Kỳ
+      region-other: Các khu vực khác
+      stats:
+        active-ambassadors: Ambassador đang hoạt động
+        active-of: "trong số {total} đã duyệt"
+        active-criteria: Các ambassador đã được duyệt mà đã ghi nhận một lượt giới thiệu hoặc gửi một poster trong 14 ngày qua.
+        signups-driven: Lượt đăng ký tạo ra
+        signups-driven-detail: "{count} đã hoàn thành"
+        total-cost: Tổng chi phí
+        cost-crunching: Đang tính toán số liệu...
+        cost-unavailable: Không khả dụng
+      cost-breakdown-title: Phân tích chi phí
+      cost-efficiency-title: Hiệu quả chi phí
+      cost-buckets:
+        referrals: Giới thiệu
+        posters: Poster
+        shirts: Áo thun
+        admin: Chi trả cho admin
+        grants: Office grant
+        reimbursements: Hoàn trả
+      efficiency:
+        hours-shipped: Số giờ đã ship
+        hours-approved: Số giờ đã duyệt
+        per-referral: $ mỗi lượt giới thiệu
+        per-successful-referral: "$ mỗi lượt giới thiệu <success>thành công</success>"
+        per-hour-shipped: $ mỗi giờ đã ship
+        by-users: "bởi {count} người dùng"
+        for-users: "cho {count} người dùng"
+        weighted-grants: "≈ {count} grant có trọng số · {amount}"
+        weighted-grants-hint: 1 grant có trọng số = 10 giờ đã duyệt, trị giá $8.50.
+      signups-by-region-title: Lượt đăng ký theo khu vực
+      signups-by-state-title: Lượt đăng ký theo tiểu bang của Ambassador
+      signups-by-state-hint: Các lượt giới thiệu được nhóm theo tiểu bang Mỹ của ambassador đã tạo ra chúng (các lượt giới thiệu không mang vị trí riêng).
+      signups-by-region-empty: Chưa có lượt đăng ký nào.
+      state-search-placeholder: Tìm kiếm tiểu bang
+      recent-activity-title: Hoạt động gần đây
+      activity-empty: Không có hoạt động nào trong khoảng thời gian này.
+      metrics:
+        referrals: Tổng số lượt giới thiệu
+        posters: Tổng số poster
+        completed: Lượt giới thiệu đã hoàn thành
+        hours-logged: Số giờ đã ghi nhận
+        hours-approved: Số giờ đã duyệt
+      ranges:
+        seven-days: 7 ngày qua
+        fourteen-days: 14 ngày qua
+        thirty-days: 30 ngày qua
+        ninety-days: 90 ngày qua
+        all-time: Toàn thời gian
+    stats:
+      visitors: Khách truy cập
+      visitors-detail: "{count} tổng lượt truy cập được theo dõi"
+      signups: Lượt đăng ký
+      signups-detail: "{percent} khách truy cập"
+      applicants: Đơn đăng ký
+      applicants-detail: "{count} tổng số lượt gửi biểu mẫu"
+      pending-review: Đang chờ xét duyệt
+      pending-review-detail: "{count} đơn đăng ký gần nhất đã được xét duyệt"
+      total-referrals: Tổng số lượt giới thiệu
+      total-referrals-detail: "{count} đã hoàn thành"
+      total-posters: Tổng số poster
+      total-posters-detail: "{count} đã hoàn thành"
+    charts:
+      recent-activity-eyebrow: Hoạt động gần đây
+      recent-activity-title: Hoạt động gần đây
+      decision-split-eyebrow: Kết quả đơn đăng ký
+      decision-split-title: Phân chia quyết định
+      application-flow-eyebrow: Luồng đơn đăng ký
+      application-flow-title: Luồng đơn đăng ký
+      no-flow-data: Chưa có dữ liệu luồng nào.
+      still-pending: Vẫn đang chờ
+      referral-drop-off-title: Giới thiệu
+      poster-status-title: Poster
+      top-ambassadors-title: Ambassador hàng đầu
+      top-ambassadors-empty: Chưa có ambassador nào có poster hoặc lượt giới thiệu.
+      top-ambassadors-all-metrics: Tất cả chỉ số
+      top-ambassadors-metrics-noun: chỉ số
+      top-ambassadors-all-states: Tất cả tiểu bang
+      top-ambassadors-balance: "Số dư ($)"
+      top-ambassadors-loading: Đang tải ambassador...
+      top-ambassadors-page: "Trang {current} trong {total}"
+      top-ambassadors-prev: Trang trước
+      top-ambassadors-next: Trang sau
+      top-ambassadors-ranges:
+        last-seven-days: 7 ngày qua
+        last-month: Tháng trước
+        all-time: Toàn thời gian
+      referrals:
+        total: Tổng số lượt giới thiệu
+        rsvp: RSVP
+        unverified: Chưa xác minh
+        pending: Đang chờ
+        verified: Đã xác minh
+        rejected: Bị từ chối
+      posters:
+        pending: Đang chờ
+        in-review: Đang xét duyệt
+        success: Đã xác minh
+        rejected: Bị từ chối
+        digital: Kỹ thuật số
+      ranges:
+        seven-days: 7 ngày
+        fourteen-days: 14 ngày
+        thirty-days: 30 ngày
+        ninety-days: 90 ngày
+      series:
+        visits: Lượt truy cập
+        signups: Lượt đăng ký
+        applications: Đơn đăng ký
+        posters: Poster
+        referrals: Giới thiệu
+        rsvps: RSVP
+        pending: Đang chờ
+        approved: Đã duyệt
+        rejected: Bị từ chối
+        banned: Bị cấm
+        denied: Bị từ chối
+        visited-website: Đã truy cập website
+        signed-up: Đã đăng ký
+        filled-form: Đã điền biểu mẫu
+  orders:
+    metadata:
+      title: Đơn hàng
+    title: Đơn hàng
+    empty: Chưa có đơn hàng nào
+    size: "Size {size}"
+    warehouse-link: Xem trên mail.hackclub.com ↗
+    view-order: Xem đơn hàng
+    warehouse:
+      crunching: Đang tính toán số liệu...
+      empty: Chưa có đơn hàng nào đã gửi đến kho.
+      stock-label: Tồn kho áo thun
+      stock-left: "Còn {count}"
+      stock-out: Hết
+      stock-unavailable: Không khả dụng
+      expenditure-label: Tổng chi tiêu (đã gửi đến kho)
+      contents: Nội dung
+      labor: Nhân công
+      postage: Cước phí
+      sent-orders: "Dựa trên {count} đơn hàng đã gửi đến kho"
+    columns:
+      user: Người dùng
+      item: Mặt hàng
+      address: Địa chỉ
+      status: Trạng thái
+      placed: Đã đặt
+      open: Mở
+    status-filter:
+      all: Tất cả trạng thái
+      pending: Đang chờ trong 24h
+      approved: Đã duyệt
+      rejected: Bị từ chối
+      failed: Thất bại
+      cancelled: Đã hủy
+    status-display:
+      pending: đang chờ trong 24h
+  order-detail:
+    page-title: Chi tiết đơn hàng
+    breadcrumb: Đơn hàng
+    unknown-user: Người dùng không rõ
+    open-user-page: Mở trang người dùng ↗
+    sections:
+      review-actions:
+        title: Ghi đè của admin
+        description: Đơn hàng tự động ship đến kho 24 giờ sau khi ambassador đặt chúng. Chỉ sử dụng các điều khiển này để bỏ qua thời gian giữ hoặc hủy đơn hàng trước khi ambassador làm điều đó.
+      order:
+        title: Đơn hàng
+        description: Những gì ambassador đã đặt.
+      warehouse:
+        title: Kho hàng
+        description: Trạng thái điều phối kho cho đơn hàng này.
+      metadata:
+        title: Metadata
+        description: Dấu thời gian và thông tin người xét duyệt.
+    actions:
+      approve: Duyệt & ship
+      approve-existing: Đánh dấu đã duyệt
+      approve-confirmation-first: Bạn có chắc không?
+      approve-confirmation-second: Bạn có thực sự chắc không? Đơn hàng đã đến kho hầu hết không thể hủy được.
+      bypass-embargo: Bỏ qua thời gian giữ 24h & ship ngay
+      bypass-confirmation-first: "Bạn có chắc không? Điều này bỏ qua khoảng thời gian 24h ambassador có thể hủy."
+      bypass-confirmation-second: Bạn có thực sự chắc không? Một khi nó đã ở kho, nó không thể bị hủy.
+      embargo-active: "Tự động ship đến kho vào {dispatchAt}. Ambassador có thể tự hủy cho đến lúc đó."
+      embargo-expired-auto: "Thời gian giữ 24h đã hết. Lần chạy tiếp theo của bộ lập lịch sẽ tự động ship đơn hàng này."
+      embargo-bypass-explainer: Chỉ bỏ qua thời gian giữ nếu có lý do chính đáng để bỏ qua khoảng thời gian hủy.
+      non-pending: Đơn hàng này không còn đang chờ, nên không có hành động admin nào khả dụng.
+      reject: Từ chối kèm ghi chú
+      reject-note-label: Ghi chú từ chối (Tùy chọn)
+      reject-note-placeholder: Lý do đơn hàng này bị từ chối
+      historical-order: Chỉ có thể chỉnh sửa đơn hàng gần nhất của người dùng này. Các đơn hàng cũ sẽ ở chế độ chỉ đọc một khi có đơn hàng mới hơn tồn tại.
+      open-warehouse-order: Mở đơn hàng kho
+      open-public-order: Mở trang đơn hàng công khai
+    fields:
+      order-id: ID đơn hàng
+      sku: SKU
+      variant: Biến thể
+      quantity: Số lượng
+      address: Địa chỉ giao hàng
+      note: Ghi chú
+      warehouse-order-id: ID đơn hàng kho
+      warehouse-status: Trạng thái kho
+      warehouse-address: Địa chỉ kho
+      recipient-email: Email người nhận
+      tracking-number: Mã theo dõi
+      carrier: Đơn vị vận chuyển
+      service: Dịch vụ
+      dispatched-at: Đã điều phối lúc
+      mailed-at: Đã gửi lúc
+      warehouse-tags: Tag kho
+      internal-fail-reason: Lý do thất bại nội bộ
+      placed: Đã đặt
+      last-updated: Cập nhật lần cuối
+      dispatch-at: Tự động ship đến kho lúc
+      reviewed: Đã xét duyệt
+      reviewed-by: Xét duyệt bởi
+      user-email: Email người dùng
+  applications-list:
+    metadata:
+      title: Đơn đăng ký
+    title: Đơn đăng ký
+    columns:
+      applicant: Người nộp đơn
+      name-on-app: Tên
+      status: Trạng thái
+      location: Vị trí
+      submitted: Đã gửi
+      open: Mở
+    latest: Mới nhất
+    history: Lịch sử
+    on-hold: Đang tạm giữ
+    view-details: Xem chi tiết
+    empty: Chưa có đơn đăng ký nào
+  hackatime-trust:
+    refresh-label: Làm mới mức độ tin cậy Hackatime
+    refresh-tip: Đôi khi làm mới có lẽ là đáng giá nhưng đừng lạm dụng nút này! Chúng ta sẽ bị giới hạn tốc độ đấy
+    refreshing: Đang làm mới...
+    refresh-failed: Làm mới thất bại
+  users-list:
+    metadata:
+      title: Người dùng
+    title: Người dùng
+    columns:
+      name: Tên
+      email: Email
+      location: Vị trí
+      latest-app: Đơn mới nhất
+      apps: Đơn
+      admin: Admin
+      joined: Đã tham gia
+      open: Mở
+    no-application: Không có đơn đăng ký
+    view-user: Xem người dùng
+    empty: Chưa có người dùng nào
+  application-detail:
+    page-title: Chi tiết đơn đăng ký
+    breadcrumb: Đơn đăng ký
+    latest-application: Đơn đăng ký mới nhất
+    historical-application: Đơn đăng ký lịch sử
+    open-user-page: Mở trang người dùng ↗
+    locked:
+      title: Xét duyệt bị khóa vào đơn đăng ký mới nhất
+      body: Các hành động duyệt và từ chối không áp dụng cho các đơn cũ hơn. Mở đơn đăng ký mới nhất được lưu cho người dùng này nếu bạn muốn đưa ra quyết định.
+      cta: Mở đơn đăng ký mới nhất
+    sections:
+      review-actions:
+        title: Hành động xét duyệt
+        description: Các nút bên dưới chỉ ảnh hưởng đến đơn đăng ký mới nhất được lưu.
+      application-answers:
+        title: Câu trả lời đơn đăng ký
+        description: Mọi thứ đã gửi cùng với đơn đăng ký này.
+      application-metadata:
+        title: Metadata đơn đăng ký
+        description: Dữ liệu gửi, trạng thái và quyết định.
+      applicant:
+        title: Người nộp đơn
+        description: Dữ liệu hồ sơ mới nhất được ghi nhận cho người dùng này.
+      history:
+        title: Lịch sử đơn đăng ký
+        description: Mới nhất trước cho người dùng này.
+      visits:
+        title: Lượt truy cập
+        description: Nhật ký truy cập được tạo bởi các lượt truy cập cách nhau ít nhất {duration}
+      orders:
+        title: Đơn hàng
+        description: Các bản ghi đơn hàng gần đây cho người dùng này.
+    actions:
+      accept: Chấp nhận
+      reject-note-label: Ghi chú từ chối
+      reject-note-placeholder: Lý do đơn đăng ký này bị từ chối
+      reject-with-note: Từ chối kèm ghi chú
+      permanent-rejection-note-label: Ghi chú từ chối vĩnh viễn
+      permanent-rejection-note-placeholder: Ngữ cảnh tùy chọn cho việc từ chối vĩnh viễn
+      reject-permanently: Từ chối vĩnh viễn
+      mark-tshirt-sent: Đánh dấu đã gửi áo thun
+      mark-tshirt-unsent: Đánh dấu chưa gửi áo thun
+      put-on-hold: Tạm giữ
+      remove-hold: Bỏ tạm giữ
+      open-internal-notes: Mở ghi chú nội bộ
+      historical-disabled: Đơn đăng ký này là lịch sử, nên các hành động xét duyệt bị vô hiệu hóa ở đây.
+      delete: Xóa khỏi phía chúng tôi
+      confirmations:
+        delete: Xóa đơn đăng ký này khỏi phía chúng tôi? Nếu bản ghi Airtable vẫn tồn tại, nó sẽ được đồng bộ lại trong lần sync tiếp theo.
+        put-on-hold: Bạn có chắc muốn tạm giữ đơn đăng ký này không? Nó sẽ không hiển thị trong chế độ xét duyệt cho đến khi được bỏ tạm giữ, nhưng bạn vẫn có thể quản lý nó từ trang Đơn đăng ký.
+        remove-hold: Bỏ tạm giữ đơn đăng ký này? Nó sẽ hiển thị lại trong chế độ xét duyệt nếu vẫn đang chờ xét duyệt.
+    answers:
+      name: Tên
+      date-of-birth: Ngày sinh
+      email: Email
+      slack-id: Slack ID
+      hca-id: HCA ID
+      phone: Điện thoại
+      address: Địa chỉ
+      tshirt-size: Kích cỡ áo thun
+      bio: Tiểu sử
+      headshot: Ảnh chân dung
+      github-url: GitHub URL
+      portfolio-url: Portfolio URL
+      first-thing-do: Điều đầu tiên bạn sẽ làm
+      best-place-poster: Nơi tốt nhất để treo poster
+      something-else: Điều gì khác
+      background: Bối cảnh
+      why-ambassador: Tại sao bạn muốn trở thành ambassador?
+      anything-else: Còn điều gì khác không?
+    metadata:
+      submitted: Đã gửi
+      last-updated: Cập nhật lần cuối
+      reviewed: Đã xét duyệt
+      reviewed-by: Xét duyệt bởi
+      airtable-record-id: ID bản ghi Airtable
+      submitted-ip: IP đã gửi
+      application-location: Vị trí đơn đăng ký
+      coordinates: Tọa độ
+      idv-status: Trạng thái xác minh ID
+      tshirt-sent: Đã gửi áo thun
+      decision-note: Ghi chú quyết định
+    applicant-fields:
+      display-name: Tên hiển thị
+      first-name: Tên
+      last-name: Họ
+      email: Email
+      slack: Slack
+      hackatime-trust-level: Mức độ tin cậy Hackatime
+      hca-id: HCA ID
+      verification-status: Trạng thái xác minh
+      street-address: Địa chỉ đường phố
+      hca-city-and-region: Thành phố và khu vực HCA
+      hca-postal-code: Mã bưu chính HCA
+      hca-country: Quốc gia HCA
+      hca-addresses: Địa chỉ HCA
+      user-location: Vị trí người dùng
+      postal-code: Mã bưu chính
+      timezone: Múi giờ
+      network-org: Tổ chức mạng
+      last-seen-ip: IP thấy lần cuối
+      user-created: Người dùng được tạo
+    history:
+      when: Khi nào
+      status: Trạng thái
+      name: Tên
+      open: Mở
+      view: Xem
+    review:
+      open-full-application: Mở đơn đăng ký đầy đủ
+      open-application: Mở đơn đăng ký
+      sections:
+        questions: Câu hỏi đơn đăng ký
+        previous-applications: Đơn đăng ký trước đó
+        decision: Quyết định
+      fields:
+        age-dob: Tuổi / Ngày sinh
+        city: Thành phố
+        country: Quốc gia
+        hackatime-trust: Mức độ tin cậy Hackatime
+        github: GitHub
+        portfolio: Portfolio
+        visit: Lượt truy cập
+      questions:
+        first-thing-do: Điều đầu tiên bạn sẽ làm với tư cách là ambassador là gì?
+        best-place-poster: Nơi tốt nhất để treo poster trong thành phố của bạn là ở đâu?
+      banners:
+        already-accepted-from: "Đã chấp nhận từ {city}:"
+        other-applications-from: "Các đơn đăng ký khác từ {city}:"
+    visits:
+      unknown-network: Mạng không rõ
+      empty: Chưa có lượt truy cập nào được ghi nhận.
+    orders:
+      empty: Không có đơn hàng nào được lưu.
+  user-detail:
+    metadata:
+      title: Chi tiết người dùng
+    breadcrumb: Người dùng
+    latest-application: Đơn đăng ký mới nhất
+    no-application: Không có đơn đăng ký
+    user-permanently-rejected: Người dùng bị từ chối vĩnh viễn
+    open-latest-application: Mở đơn đăng ký mới nhất ↗
+    sections:
+      user-actions:
+        title: Hành động người dùng
+        description: Tất cả các điều khiển này nhắm đến đơn đăng ký mới nhất được lưu.
+      dashboard-state:
+        title: Ghi đè trạng thái
+        description: Trạng thái dự phòng thủ công cho người dùng không có đơn đăng ký. Nếu họ nộp đơn sau này, trạng thái đơn đăng ký mới nhất sẽ tự động được ưu tiên.
+      flags:
+        title: Flag
+        description: Bật hoặc tắt các flag tính năng theo từng người dùng.
+      notes:
+        title: Ghi chú
+        description: Ghi chú nội bộ.. bạn đang nấu nướng gì ở đó vậy? Nhân tiện, những ghi chú này được ghi vào audit log. Như bạn có thể thấy.
+      user-profile:
+        title: Hồ sơ người dùng
+        description: Dữ liệu tài khoản và vị trí hiện tại.
+      applications:
+        title: Đơn đăng ký
+        description: Lịch sử đơn đăng ký đầy đủ, mới nhất trước.
+      latest-application-snapshot:
+        title: Ảnh chụp nhanh đơn đăng ký mới nhất
+        description: Xem nhanh trạng thái đơn đăng ký mới nhất.
+      permanent-rejection:
+        title: Từ chối vĩnh viễn
+        description: Trạng thái khóa ở cấp người dùng.
+      visits:
+        title: Lượt truy cập
+        description: Nhật ký truy cập được tạo bởi các lượt truy cập cách nhau ít nhất {duration}
+      orders:
+        title: Đơn hàng
+        description: Các bản ghi đơn hàng gần đây gắn với tài khoản này.
+      posters:
+        title: Poster
+        description: Các poster được gửi bởi ambassador này.
+      referrals:
+        title: Giới thiệu
+        description: Các lượt giới thiệu Stardance được ghi nhận cho ambassador này.
+    actions:
+      current-review-target: Đối tượng xét duyệt hiện tại
+      impersonate: Đóng vai người dùng
+      make-admin: Cấp quyền admin
+      make-admin-confirmation: Bạn có chắc muốn cấp quyền admin cho người dùng này không?
+      remove-admin: Gỡ quyền admin
+      remove-admin-confirmation: Bạn có chắc muốn gỡ quyền truy cập admin của người dùng này không?
+      bypass-approval: Bỏ qua duyệt
+      reject-note-label: Ghi chú từ chối
+      reject-note-placeholder: Lý do người dùng này nên bị từ chối
+      reject: Từ chối
+      permanent-rejection-note-label: Ghi chú từ chối vĩnh viễn
+      permanent-rejection-note-placeholder: Ngữ cảnh tùy chọn cho việc từ chối vĩnh viễn
+      reject-permanently: Từ chối vĩnh viễn
+      save-note: Lưu ghi chú
+      no-review-target: Người dùng này chưa có đơn đăng ký nào, nên không có đối tượng xét duyệt để cập nhật.
+    superuser:
+      password-label: Mật khẩu superuser
+      missing: SUPERUSER_PASSWORD chưa được cấu hình, nên các thay đổi quyền truy cập admin bị vô hiệu hóa.
+      invalid: Mật khẩu superuser đó không được chấp nhận.
+    notes:
+      current-note: Ghi chú hiện tại
+      note-label: Ghi chú
+      note-placeholder: Thêm ngữ cảnh nội bộ về người dùng này
+      history-title: Thay đổi gần đây
+      empty: Chưa có ghi chú nào.
+      cleared: Đã xóa ghi chú
+      unknown-actor: Admin không rõ
+    flags:
+      onboarding-enabled: Onboarding
+      shirt-ordering-enabled: Đặt áo thun
+      posters-enabled: Poster
+      referrals-enabled: Giới thiệu
+      override-active: Ghi đè đang hoạt động (luôn bật cho người dùng này)
+      override-inactive: Không có ghi đè (sử dụng flag toàn cục)
+      grant-override: Cấp ghi đè
+      remove-override: Xóa ghi đè
+    dashboard-state:
+      current-manual-state: Trạng thái thủ công hiện tại
+      no-manual-state: Chưa đặt trạng thái thủ công
+      application-precedence: Người dùng này có một đơn đăng ký được lưu, nên trạng thái của nó hiện được ưu tiên hơn trạng thái dự phòng thủ công.
+      fallback-mode: Trạng thái thủ công này là trạng thái bảng điều khiển hiện tại cho đến khi người dùng gửi một đơn đăng ký.
+      set-approved: Duyệt
+      set-rejected: Từ chối
+      set-banned: Cấm
+      clear-state: Xóa
+    profile-fields:
+      display-name: Tên hiển thị
+      first-name: Tên
+      last-name: Họ
+      email: Email
+      slack: Slack
+      hackatime-trust-level: Mức độ tin cậy Hackatime
+      hca-id: HCA ID
+      verification-status: Trạng thái xác minh
+      street-address: Địa chỉ đường phố
+      hca-city-and-region: Thành phố và khu vực HCA
+      hca-postal-code: Mã bưu chính HCA
+      hca-country: Quốc gia HCA
+      hca-addresses: Địa chỉ HCA
+      location: Vị trí
+      postal-code: Mã bưu chính
+      timezone: Múi giờ
+      network-org: Tổ chức mạng
+      coordinates: Tọa độ
+      last-seen-ip: IP thấy lần cuối
+      admin: Admin
+      manual-dashboard-state: Trạng thái bảng điều khiển thủ công
+      created: Đã tạo
+      updated: Đã cập nhật
+    applications:
+      submitted: Đã gửi
+      status: Trạng thái
+      name: Tên
+      open: Mở
+      view: Xem
+      empty: Không có đơn đăng ký nào được lưu.
+    latest-application-snapshot:
+      application-id: ID đơn đăng ký
+      submitted: Đã gửi
+      updated: Đã cập nhật
+      name-on-app: Tên trên đơn
+      date-of-birth: Ngày sinh
+      decision-note: Ghi chú quyết định
+      empty: Không có đơn đăng ký nào được lưu.
+    permanent-rejection:
+      rejected-permanently-at: Bị từ chối vĩnh viễn lúc
+      permanent-note: Ghi chú vĩnh viễn
+    visits:
+      local-time: "{time} giờ địa phương"
+      unknown-network: Mạng không rõ
+      empty: Chưa có lượt truy cập nào được ghi nhận.
+    orders:
+      empty: Không có đơn hàng nào được lưu.
+    posters:
+      empty: Không có poster nào được lưu.
+      total: "{count} tổng cộng"
+      breakdown: "{pending} đang chờ • {inReview} đang xét duyệt • {success} đã xác minh • {rejected} bị từ chối • {digital} kỹ thuật số"
+      columns:
+        created: Đã tạo
+        proof: Bằng chứng
+        name: Tên
+        code: Mã
+        type: Loại
+        status: Trạng thái
+        actions: Hành động
+      reject: Từ chối
+      reject-confirmation: Bạn có chắc muốn đánh dấu poster này là bị từ chối không?
+      no-name: Chưa đặt tên
+      no-proof: Không có bằng chứng
+    referrals:
+      empty: Không có lượt giới thiệu nào được lưu.
+      total: "{count} tổng cộng"
+      breakdown: "{unverified} chưa xác minh • {pending} đang chờ • {verified} đã xác minh • {rejected} bị từ chối"
+      columns:
+        referred: Được giới thiệu
+        name: Tên
+        email: Email
+        hours: Số giờ
+        status: Trạng thái
+        actions: Hành động
+      verify: Xác minh
+      reject: Từ chối
+      verify-confirmation: Bạn có chắc muốn đánh dấu lượt giới thiệu này là đã xác minh không?
+      reject-confirmation: Bạn có chắc muốn đánh dấu lượt giới thiệu này là bị từ chối không?
+
+landing:
+  metadata:
+    title: Chương trình Ambassador
+
+  apply: Nộp đơn
+  apply-sub: "Chỉ US, UK, CA, EU, AU, NZ"
+  log-in: Đăng nhập
+  dashboard: Bảng điều khiển
+
+  hero:
+    0: Dẫn dắt cộng đồng Hack Club Stardance mùa hè này tại
+    1: thành phố của bạn.
+
+  intro:
+    start: --- BẮT ĐẦU THÔNG ĐIỆP ---
+    0: Mùa hè này, Hack Club hợp tác với NASA, AMD và GitHub để tổ chức thử thách kỹ thuật lớn nhất thế giới, và chúng tôi cần sự giúp đỡ của bạn để tìm ra cách thúc đẩy lượt đăng ký và giúp hàng trăm nghìn học sinh khám phá Hack Club lần đầu tiên.
+    1: Nhiệm vụ của bạn, nếu bạn chọn chấp nhận, là đưa các bạn trẻ từ thành phố của bạn đăng ký tham gia Stardance Challenge. Cùng nhau, chúng ta sẽ tìm ra cách đưa <strong>100.000 người dùng</strong> qua mùa hè này!
+    2: Đến cuối mùa hè này, bạn sẽ trở thành chuyên gia trong việc thúc đẩy người dùng cho bất cứ điều gì bạn làm trong tương lai. Bạn cũng nhận được áo thun và merch của Hack Club. Thêm vào đó, bạn nhận được <strong>khoản thù lao $100</strong>* và <strong>được trả tiền</strong> cho mỗi poster bạn treo và mỗi lượt đăng ký bạn có được. Tìm thêm thông tin <faq_link>tại đây</faq_link>. <partyparrot></partyparrot>
+    3: Sẵn sàng chưa?
+    footnote: "*Nếu bạn tổ chức từ 2 buổi meetup trở lên mỗi tháng vào tháng 6, tháng 7 và tháng 8, chúng tôi sẽ trả cho bạn $100 vào cuối tháng 8."
+    end: <<EOF
+
+  past-events:
+    title: Sự kiện đã qua
+    0: Năm 2025, các Hack Clubber trên khắp thế giới đã dành hơn <strong>240.000 giờ lập trình</strong>, xây dựng hơn <strong>23.000 dự án độc đáo</strong>.
+    1: Năm 2026, chúng tôi muốn làm tốt hơn nữa.
+    flagship:
+      title: Campfire Flagship
+      desc: Một game jam flagship 3 ngày tại Los Angeles với các YouTuber như Michael Reeves, William Osman và nhiều người khác nữa!
+    blueprint:
+      title: Blueprint
+      desc: Blueprint đã trao $140.000 để tài trợ cho 1.500 dự án phần cứng và điện tử được xây dựng bởi các bạn trẻ.
+    midnight:
+      title: Midnight
+      desc: Một hackathon trinh thám phá án được tổ chức tại Vienna, Áo với hơn 60 bạn trẻ từ khắp nơi trên thế giới!
+    siege:
+      title: Siege
+      desc: Hơn 100 bạn trẻ đã tạo một dự án mỗi tuần trong 10 tuần và nhận được một chiếc laptop Framework.
+
+  past-projects:
+    title: Các dự án đã được xây dựng bởi các bạn trẻ trong Hack Club
+    by: Bởi
+    doom-pdf:
+      title: Doom PDF
+      desc: "Một bản port mã nguồn của Doom (1993),\nchạy bên trong một tài liệu PDF."
+      by: Allen D
+    librepods:
+      title: LibrePods
+      desc: "Airpods được giải phóng khỏi\nhệ sinh thái của Apple."
+      by: Kavish D
+    vert:
+      title: VERT
+      desc: "Một tiện ích chuyển đổi file sử dụng\nWebAssembly để chuyển đổi file\ntrên thiết bị thay vì trên cloud."
+      by: Maya
+    biblically-accurate:
+      title: The Biblically Accurate Macropad
+      desc: "Một macropad rất macro có hình dạng\ncủa một thiên thần chuẩn theo Kinh Thánh!"
+      by: Alex Tran
+    specter:
+      title: Specter
+      desc: "Một trò chơi về một hiệp sĩ dũng cảm\ncố gắng thoát khỏi hang động, nhưng\nbị ám bởi chính hồn ma của mình."
+      by: Ayessa
+    blind-defusal:
+      title: Blind Defusal
+      desc: "Một trò chơi hợp tác hai người\n\"gỡ bom\"."
+      by: Josh, Brandon & Johnathan
+
+  footer:
+    cta: Tạo dấu ấn của bạn.
+    cta-sub: đơn đăng ký đóng vào [tbd] tháng 4 năm 2026, lúc 12:00 sáng EDT.
+    copyright: "© 2026 Hack Club. Tổ chức phi lợi nhuận 501(c)(3) (EIN:\u00A081-2908499)"
