@@ -63,7 +63,7 @@ export async function loadTopAmbassadors(
         COUNT(*)::int AS poster_count,
         COUNT(*) FILTER (WHERE verification_status = 'success')::int AS verified_poster_count
       FROM posters
-      WHERE TRUE ${posterDateFilter}
+      WHERE deleted_at IS NULL ${posterDateFilter}
       GROUP BY user_id
     ),
     referral_counts AS (

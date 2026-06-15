@@ -867,6 +867,7 @@ export async function getPayoutBreakdown(payoutId: string) {
           FROM posters p
           LEFT JOIN poster_groups g ON g.id = p.poster_group_id
           WHERE p.user_id = ${payout.user_id}
+            AND p.deleted_at IS NULL
             AND p.verification_status = 'success'
             AND p.id NOT IN (SELECT pp.poster_id FROM payout_posters pp)
           ORDER BY p.verified_at DESC NULLS LAST, p.created_at DESC
@@ -1047,6 +1048,7 @@ async function freezePayoutLineItems(
     SELECT ${payout.id}, p.id, ${POSTER_PAYOUT_CENTS}
     FROM posters p
     WHERE p.user_id = ${payout.user_id}
+      AND p.deleted_at IS NULL
       AND p.verification_status = 'success'
       AND p.id NOT IN (SELECT pp.poster_id FROM payout_posters pp)
     ON CONFLICT (payout_id, poster_id) DO NOTHING

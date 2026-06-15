@@ -3,16 +3,20 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
 import { DetailFieldRow, DetailSection } from "@/components/admin/detail";
-import { LocalDateTime } from "@/components/admin/local-date-time";
+import { Timestamp } from "@/components/timestamp";
+import { buttonVariants } from "@/components/ui/button";
 import {
   formatAuditEventSummary,
   formatEventType,
   getAuditEventDetailRows,
+  getMetadataRecord,
 } from "@/lib/admin-action-event-format";
 import sql from "@/lib/database/client";
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { getTranslatedPageMetadata } from "@/i18n/metadata";
+import { cn } from "@/lib/utils";
 
 type AuditLogEventRow = {
   id: string;
@@ -64,6 +68,27 @@ export default async function AdminAuditLogEventPage({
 
   const detailRows = getAuditEventDetailRows(event.metadata);
 
+  const metadataRecord = getMetadataRecord(event.metadata) ?? {};
+  const deletedPosterId =
+    event.action === "poster_deleted" && typeof metadataRecord.posterId === "string"
+      ? metadataRecord.posterId
+      : null;
+  let reversal: "deleted" | "live" | "recreatable" | "gone" | null = null;
+  if (deletedPosterId !== null) {
+    const poster = (await sql<{ deleted_at: string | null }[]>`
+      SELECT deleted_at FROM posters WHERE id = ${deletedPosterId} LIMIT 1
+    `).at(0);
+    if (poster !== undefined) {
+      reversal = poster.deleted_at === null ? "live" : "deleted";
+    } else {
+      const recreatable =
+        event.target_user_id !== null &&
+        typeof metadataRecord.referralCode === "string" &&
+        typeof metadataRecord.campaignSlug === "string";
+      reversal = recreatable ? "recreatable" : "gone";
+    }
+  }
+
   return (
     <div className="space-y-8">
       <header className="space-y-4">
@@ -97,7 +122,7 @@ export default async function AdminAuditLogEventPage({
         <div className="grid gap-2 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-5">
           <div className="text-sm text-secondary">{t("admin.audit-log.columns.when")}</div>
           <div className="font-body text-base text-foreground">
-            <LocalDateTime value={event.created_at} locale={locale} />
+            <Timestamp value={event.created_at} locale={locale} />
           </div>
         </div>
       </DetailSection>
@@ -136,6 +161,43 @@ export default async function AdminAuditLogEventPage({
           </p>
         )}
       </DetailSection>
+
+      {reversal !== null ? (
+        <DetailSection
+          title={t("admin.audit-log.event-detail.reverse.title")}
+          description={t("admin.audit-log.event-detail.reverse.description")}
+        >
+          {reversal === "deleted" || reversal === "recreatable" ? (
+            <ConfirmSubmitForm
+              action={`/api/admin/audit-log/${event.id}/revert`}
+              method="POST"
+              confirmationMessage={
+                reversal === "recreatable"
+                  ? t("admin.audit-log.event-detail.reverse.recreate-confirm")
+                  : t("admin.audit-log.event-detail.reverse.confirm")
+              }
+            >
+              <input type="hidden" name="redirectTo" value={`/admin/audit-log/${event.id}`} />
+              {reversal === "recreatable" ? (
+                <p className="mb-3 font-body text-sm text-muted-foreground">
+                  {t("admin.audit-log.event-detail.reverse.recreate-note")}
+                </p>
+              ) : null}
+              <button className={cn(buttonVariants({ variant: "default", size: "app-sm" }))}>
+                {reversal === "recreatable"
+                  ? t("admin.audit-log.event-detail.reverse.recreate-action")
+                  : t("admin.audit-log.event-detail.reverse.action")}
+              </button>
+            </ConfirmSubmitForm>
+          ) : (
+            <p className="font-body text-base text-foreground">
+              {reversal === "live"
+                ? t("admin.audit-log.event-detail.reverse.already-restored")
+                : t("admin.audit-log.event-detail.reverse.unavailable")}
+            </p>
+          )}
+        </DetailSection>
+      ) : null}
     </div>
   );
 }

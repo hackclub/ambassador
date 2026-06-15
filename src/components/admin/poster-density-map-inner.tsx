@@ -1,22 +1,18 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-// Registers L.heatLayer (and pins window.L for the plugin) before it's used below.
+// Registers L.heatLayer and pins window.L for the plugin.
 import "./leaflet-heat";
 
 import L from "leaflet";
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 
 export type PosterMapPoint = {
   id: string;
   lat: number;
   lng: number;
   country: string;
-  // Set for the viewer's own posters: renders the dot more prominently and
-  // shows `label` on hover.
-  mine?: boolean;
-  label?: string;
   placedBy?: { id: string; name: string };
 };
 
@@ -27,8 +23,7 @@ export type PosterMapDetailsMessages = {
   addressUnavailable: string;
 };
 
-// Pull the brand red from the live token so dots stay inside the palette
-// (Leaflet writes colours as SVG values, which don't resolve CSS vars).
+// Read --primary off the live token; Leaflet writes SVG colours, which can't resolve CSS vars.
 function brandColor() {
   if (typeof window === "undefined") return "#ec3750";
   const value = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
@@ -40,10 +35,7 @@ function FitBounds({ points }: { points: PosterMapPoint[] }) {
   useEffect(() => {
     if (points.length === 0) return;
     const bounds = L.latLngBounds(points.map((point) => [point.lat, point.lng]));
-    // The map is lazy-loaded, so on first paint its container often hasn't been
-    // measured yet and a synchronous fitBounds would fit a zero-size viewport
-    // (leaving the default world view until the next interaction). Wait a frame,
-    // re-measure, then fit — so "My region" frames on load, not just on reclick.
+    // Wait a frame and re-measure before fitting; on first paint the lazy-loaded container is still zero-size.
     const frame = requestAnimationFrame(() => {
       map.invalidateSize();
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 11 });
@@ -53,9 +45,6 @@ function FitBounds({ points }: { points: PosterMapPoint[] }) {
   return null;
 }
 
-// A brand-red heat layer: every point shares the same hue, so density reads
-// through accumulated opacity rather than a rainbow ramp — keeping the map inside
-// the palette while still pooling into hotspots.
 function HeatLayer({ points, color }: { points: PosterMapPoint[]; color: string }) {
   const map = useMap();
   useEffect(() => {
@@ -76,10 +65,6 @@ function HeatLayer({ points, color }: { points: PosterMapPoint[]; color: string 
   return null;
 }
 
-// Popup body for one dot: the placer (linked to their admin page) and the
-// reverse-geocoded street address. react-leaflet only portals popup children in
-// once the popup first opens, so mounting this component is what triggers the
-// lazy address lookup; it stays mounted afterwards, caching the result.
 function DotDetails({
   point,
   messages,
@@ -112,8 +97,7 @@ function DotDetails({
     };
   }, [point.id]);
 
-  // Leaflet's popup stylesheet outranks plain utility classes (it colours links
-  // and adds paragraph margins), so the overrides here carry !important.
+  // Overrides carry !important; Leaflet's popup stylesheet outranks plain utility classes.
   return (
     <div className="font-body text-sm">
       {point.placedBy !== undefined ? (
@@ -138,9 +122,6 @@ export default function PosterDensityMapInner({
   detailsMessages,
 }: {
   points: PosterMapPoint[];
-  // The subset the map reframes onto. Defaults to every point; in zoom mode it
-  // tracks the dropdown selection so picking an area flies the map there while
-  // every dot stays rendered.
   focusPoints?: PosterMapPoint[];
   mode?: PosterMapMode;
   detailsMessages?: PosterMapDetailsMessages;
@@ -164,35 +145,26 @@ export default function PosterDensityMapInner({
       {mode === "heat" ? (
         <HeatLayer points={points} color={dotColor} />
       ) : (
-        // Render the viewer's own dots last so they sit on top of the crowd and
-        // stay hoverable where posters overlap.
-        [...points]
-          .sort((a, b) => (a.mine ? 1 : 0) - (b.mine ? 1 : 0))
-          .map((point) => (
-            <CircleMarker
-              key={point.id}
-              center={[point.lat, point.lng]}
-              radius={point.mine ? 7 : 5}
-              pathOptions={{
-                color: dotColor,
-                fillColor: dotColor,
-                fillOpacity: point.mine ? 0.95 : 0.45,
-                opacity: point.mine ? 1 : 0.6,
-                weight: point.mine ? 2 : 1,
-              }}
-            >
-              {point.mine && point.label !== undefined ? (
-                <Tooltip direction="top" offset={[0, -4]}>
-                  <span className="font-body text-xs">{point.label}</span>
-                </Tooltip>
-              ) : null}
-              {detailsMessages !== undefined ? (
-                <Popup>
-                  <DotDetails point={point} messages={detailsMessages} />
-                </Popup>
-              ) : null}
-            </CircleMarker>
-          ))
+        points.map((point) => (
+          <CircleMarker
+            key={point.id}
+            center={[point.lat, point.lng]}
+            radius={5}
+            pathOptions={{
+              color: dotColor,
+              fillColor: dotColor,
+              fillOpacity: 0.45,
+              opacity: 0.6,
+              weight: 1,
+            }}
+          >
+            {detailsMessages !== undefined ? (
+              <Popup>
+                <DotDetails point={point} messages={detailsMessages} />
+              </Popup>
+            ) : null}
+          </CircleMarker>
+        ))
       )}
     </MapContainer>
   );

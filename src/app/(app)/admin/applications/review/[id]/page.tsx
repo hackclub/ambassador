@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { ReviewDecisionActions } from "@/components/admin/review-decision-actions";
 import { SlackAvatar } from "@/components/admin/slack-profile";
+import { Timestamp } from "@/components/timestamp";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getTranslatedPageMetadata } from "@/i18n/metadata";
 import {
@@ -17,7 +18,7 @@ import {
 } from "@/lib/applications/status";
 import sql from "@/lib/database/client";
 import { ensureSchema } from "@/lib/database/ensure-schema";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { getCachedHackatimeTrustLevel } from "@/lib/hackatime";
 import { ReviewModeClient } from "@/components/admin/review-mode-client";
 import { HackatimeTrustStatus } from "@/components/admin/hackatime-trust-status";
@@ -491,7 +492,7 @@ export default async function ReviewModePage({
                     {getApplicationNameLabel(entry.name)}
                   </span>
                   <span className="font-body text-xs text-secondary tabular-nums">
-                    {new Date(entry.created_at).toLocaleDateString(locale)}
+                    <Timestamp value={entry.created_at} locale={locale} dateOnly />
                   </span>
                   <Link
                     href={`/admin/applications/${entry.id}`}
@@ -546,7 +547,7 @@ export default async function ReviewModePage({
                         {entry.actor_display_name ?? entry.actor_email ?? entry.created_by ?? t("admin.user-detail.notes.unknown-actor")}
                       </span>
                       <span className="text-xs text-secondary">
-                        {formatDateTime(entry.created_at, locale)}
+                        <Timestamp value={entry.created_at} locale={locale} />
                       </span>
                     </div>
                     <div className="mt-1 whitespace-pre-line font-body text-sm text-foreground break-words [overflow-wrap:anywhere]">

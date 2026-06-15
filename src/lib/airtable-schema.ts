@@ -64,7 +64,9 @@ export type MeetupFieldKey =
   | "venueZip"
   | "venueCountry"
   | "latitude"
-  | "longitude";
+  | "longitude"
+  | "googleMapsUrl"
+  | "appleMapsUrl";
 
 export type MeetupParticipantFieldKey =
   | "meetup"

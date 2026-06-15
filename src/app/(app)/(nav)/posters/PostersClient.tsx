@@ -24,8 +24,8 @@ import {
 } from "@/components/ui/select";
 import type { PosterCampaignSummary } from "@/lib/posters/config";
 import {
+  MAX_GROUPS_PER_USER,
   MAX_POSTERS_PER_GROUP,
-  MAX_POSTERS_PER_USER,
   formatPosterStyle,
   parsePosterStyle,
   type PosterStyle,
@@ -142,6 +142,52 @@ const SUPPORTED_PROOF_IMAGE_MIME_TYPES = new Set([
 ]);
 const SUPPORTED_PROOF_IMAGE_FORMATS = "PNG, JPG, HEIC, WebP";
 
+function DownloadMenu({
+  label,
+  items,
+  align = "end",
+}: {
+  label: string;
+  items: { label: string; href: string }[];
+  align?: "start" | "end";
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          data-slot="icon-link"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 bg-transparent p-0 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Icon glyph="download" size={20} />
+          <span>{label}</span>
+          <ChevronDown size={14} className="opacity-60" aria-hidden />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align={align} sideOffset={4} className="w-48 gap-0 rounded-none p-1">
+        <ul role="menu">
+          {items.map((item) => (
+            <li key={item.href} role="none">
+              <a
+                href={item.href}
+                role="menuitem"
+                data-slot="select-item"
+                onClick={() => setOpen(false)}
+                className="flex w-full cursor-pointer items-center gap-2 bg-transparent px-3 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-foreground/8 focus:bg-foreground/8 focus:outline-none"
+              >
+                {item.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function parseGroupSizeInput(value: string) {
   const trimmed = value.trim();
   if (!/^\d+$/.test(trimmed)) return null;
@@ -178,15 +224,15 @@ export function PostersClient({
   defaultPaperSize,
   defaultRegionCode,
   densityMap,
+  ownPosterMap,
 }: {
   campaigns: PosterCampaignSummary[];
   initialCampaignSlug: string | null;
   initialData: ClientPosterData;
   defaultPaperSize: PaperSize;
   defaultRegionCode: string | null;
-  // The global poster map, sat right under "New posters" so it shares the
-  // page's section rhythm instead of floating at the very bottom.
   densityMap?: ReactNode;
+  ownPosterMap?: ReactNode;
 }) {
   const t = useTranslations("posters");
   const router = useRouter();
@@ -440,9 +486,11 @@ export function PostersClient({
   ];
   const pendingPosters = allPosters.filter((p) => p.verification_status === "pending");
   const verifiedCount = allPosters.filter((p) => p.verification_status === "success").length;
+  const unverifiedCount = allPosters.filter((p) => p.verification_status !== "success").length;
   const totalPosters = allPosters.length;
 
   const [draggingPosterId, setDraggingPosterId] = useState<string | null>(null);
+  const [draggingGroupId, setDraggingGroupId] = useState<string | null>(null);
   const movePoster = useCallback(
     async (posterId: string, targetGroupId: string | null) => {
       try {
@@ -454,14 +502,45 @@ export function PostersClient({
     },
     [refresh, t],
   );
+  const moveGroup = useCallback(
+    async (sourceGroupId: string, targetGroupId: string | null) => {
+      if (sourceGroupId === targetGroupId) return;
+      const source = data.groups.find((g) => g.id === sourceGroupId);
+      if (!source) return;
+      const sourceName = source.name?.trim() || t("groups.unnamed");
+      const count = source.posters.length;
+      const message =
+        targetGroupId === null
+          ? t("groups.move.ungroup-confirm", { name: sourceName, count })
+          : t("groups.move.merge-confirm", {
+              name: sourceName,
+              count,
+              target: data.groups.find((g) => g.id === targetGroupId)?.name?.trim() || t("groups.unnamed"),
+            });
+      if (!window.confirm(message)) return;
+      try {
+        await moveGroupRequest(sourceGroupId, targetGroupId);
+        await refresh();
+      } catch (error) {
+        setError(error instanceof Error && error.message ? error.message : t("errors.move-failed"));
+      }
+    },
+    [data.groups, refresh, t],
+  );
   const dragContextValue = useMemo<PosterDragContextValue>(
     () => ({
       draggingPosterId,
+      draggingGroupId,
       beginDrag: (id) => setDraggingPosterId(id),
-      endDrag: () => setDraggingPosterId(null),
+      beginGroupDrag: (id) => setDraggingGroupId(id),
+      endDrag: () => {
+        setDraggingPosterId(null);
+        setDraggingGroupId(null);
+      },
       onMovePoster: movePoster,
+      onMoveGroup: moveGroup,
     }),
-    [draggingPosterId, movePoster],
+    [draggingPosterId, draggingGroupId, movePoster, moveGroup],
   );
 
   return (
@@ -469,7 +548,6 @@ export function PostersClient({
     <div className="space-y-12">
       {error !== null ? <ErrorBanner message={error} onDismiss={() => setError(null)} /> : null}
 
-      {/* Scan prompts */}
       {pendingPosters.length > 0 && (
         <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
@@ -504,8 +582,6 @@ export function PostersClient({
         </section>
       )}
 
-      {/* Create + the global poster map, clustered with the same tight gap the
-          grouped/ungrouped cards use so the map reads as part of this block. */}
       <section className="space-y-4">
         <div>
           <h2 className="font-sub text-2xl font-bold leading-8 text-foreground">{t("sections.new")}</h2>
@@ -540,26 +616,44 @@ export function PostersClient({
         {densityMap}
       </section>
 
-      {/* Your posters (groups + ungrouped) */}
+      {ownPosterMap}
+
       {(data.groups.length > 0 || data.standalonePosters.length > 0) && (
         <section>
-          <button
-            type="button"
-            data-slot="open-link"
-            onClick={() => setShowGroups((open) => !open)}
-            className="group inline-flex items-center gap-2 bg-transparent p-0 text-left"
-            aria-expanded={showGroups}
-          >
-            <span className="font-sub text-2xl font-bold leading-8 text-foreground">{t("sections.yours")}</span>
-            <ChevronDown
-              size={20}
-              className={cn(
-                "text-muted-foreground transition-transform duration-150 group-hover:text-foreground",
-                showGroups && "rotate-180",
-              )}
-              aria-hidden
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <button
+              type="button"
+              data-slot="open-link"
+              onClick={() => setShowGroups((open) => !open)}
+              className="group inline-flex items-center gap-2 bg-transparent p-0 text-left"
+              aria-expanded={showGroups}
+            >
+              <span className="font-sub text-2xl font-bold leading-8 text-foreground">{t("sections.yours")}</span>
+              <ChevronDown
+                size={20}
+                className={cn(
+                  "text-muted-foreground transition-transform duration-150 group-hover:text-foreground",
+                  showGroups && "rotate-180",
+                )}
+                aria-hidden
+              />
+            </button>
+            <DownloadMenu
+              label={t("actions.download")}
+              items={[
+                { label: t("actions.download-all-pdf"), href: "/api/posters/bulk?format=pdf" },
+                { label: t("actions.download-all-zip"), href: "/api/posters/bulk?format=zip" },
+                ...(unverifiedCount > 0
+                  ? [
+                      {
+                        label: t("actions.download-unverified"),
+                        href: "/api/posters/bulk?scope=unverified&format=pdf",
+                      },
+                    ]
+                  : []),
+              ]}
             />
-          </button>
+          </div>
           {showGroups && (
             <div className="mt-4 space-y-4">
               {data.groups.map((group) => (
@@ -651,6 +745,7 @@ function GroupCard({
   const remaining = Math.max(0, MAX_POSTERS_PER_GROUP - group.posters.length);
   const displayName = group.name !== null && group.name.trim() !== "" ? group.name : t("groups.unnamed");
   const { hover, isDragging, dropHandlers } = useDropTarget(group.id);
+  const groupDrag = usePosterGroupDragHandle(group.id);
   const groupFull = group.posters.length >= MAX_POSTERS_PER_GROUP;
   const trimmedAddCountInput = addCountInput.trim();
   const parsedAddCountInput = parseGroupSizeInput(addCountInput);
@@ -716,10 +811,22 @@ function GroupCard({
         isDragging && !groupFull && "border-dashed border-foreground/30",
         hover && !groupFull && "border-solid border-primary/60",
         isDragging && groupFull && "opacity-60",
+        groupDrag.isDragging && "opacity-40",
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          {!editingName ? (
+            <span
+              {...groupDrag.handleProps}
+              aria-hidden
+              className="mt-0.5 shrink-0 cursor-grab select-none text-muted-foreground/60 active:cursor-grabbing"
+              title={t("actions.move-group", { name: displayName })}
+            >
+              <Icon glyph="move" size={16} />
+            </span>
+          ) : null}
+          <div className="min-w-0 flex-1">
           {editingName ? (
             <PosterRenameControls
               inputRef={nameInputRef}
@@ -745,27 +852,17 @@ function GroupCard({
           {renameError !== null ? (
             <p className="mt-1 text-xs text-primary">{renameError}</p>
           ) : null}
+          </div>
         </div>
         {!editingName && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <a
-            href={`/api/poster-groups/${group.id}/pdf`}
-            data-slot="icon-link"
-            className="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <Icon glyph="download" size={20} />
-            <span className="sm:hidden">PDF</span>
-            <span className="hidden sm:inline">Download group (PDF)</span>
-          </a>
-          <a
-            href={`/api/poster-groups/${group.id}/zip`}
-            data-slot="icon-link"
-            className="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <Icon glyph="download" size={20} />
-            <span className="sm:hidden">ZIP</span>
-            <span className="hidden sm:inline">Download group (ZIP)</span>
-          </a>
+          <DownloadMenu
+            label={t("actions.download")}
+            items={[
+              { label: t("actions.download-pdf"), href: `/api/poster-groups/${group.id}/pdf` },
+              { label: t("actions.download-zip"), href: `/api/poster-groups/${group.id}/zip` },
+            ]}
+          />
           <button
             type="button"
             data-slot="icon-link"
@@ -927,14 +1024,30 @@ async function movePosterRequest(posterId: string, groupId: string | null) {
   }
 }
 
+async function moveGroupRequest(sourceGroupId: string, targetGroupId: string | null) {
+  const response = await fetch(`/api/poster-groups/${sourceGroupId}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ action: "move", targetGroupId }),
+  });
+  if (!response.ok) {
+    const data = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(data?.error || "Failed to move group.");
+  }
+}
+
 const POSTER_DRAG_MIME = "application/x-poster-id";
+const GROUP_DRAG_MIME = "application/x-poster-group-id";
 const UNGROUPED_DROP_TARGET = "__standalone__";
 
 type PosterDragContextValue = {
   draggingPosterId: string | null;
+  draggingGroupId: string | null;
   beginDrag: (posterId: string) => void;
+  beginGroupDrag: (groupId: string) => void;
   endDrag: () => void;
   onMovePoster: (posterId: string, targetGroupId: string | null) => Promise<void>;
+  onMoveGroup: (sourceGroupId: string, targetGroupId: string | null) => Promise<void>;
 };
 
 const PosterDragContext = createContext<PosterDragContextValue | null>(null);
@@ -946,11 +1059,12 @@ function usePosterDrag() {
 }
 
 function useDropTarget(targetId: string) {
-  const { draggingPosterId, onMovePoster, endDrag } = usePosterDrag();
+  const { draggingPosterId, draggingGroupId, onMovePoster, onMoveGroup, endDrag } = usePosterDrag();
   const [hover, setHover] = useState(false);
 
-  const isDragging = draggingPosterId !== null;
   const groupId = targetId === UNGROUPED_DROP_TARGET ? null : targetId;
+  const groupDragValid = draggingGroupId !== null && draggingGroupId !== groupId;
+  const isDragging = draggingPosterId !== null || groupDragValid;
 
   const dropHandlers = {
     onDragOver: (event: React.DragEvent) => {
@@ -973,15 +1087,41 @@ function useDropTarget(targetId: string) {
     onDrop: (event: React.DragEvent) => {
       if (!isDragging) return;
       event.preventDefault();
-      const posterId = event.dataTransfer.getData(POSTER_DRAG_MIME) || draggingPosterId;
+      // getData is only readable on drop; fall back to the in-flight ids tracked from dragstart.
+      const sourceGroupId = event.dataTransfer.getData(GROUP_DRAG_MIME) || (groupDragValid ? draggingGroupId : "");
+      const posterId = event.dataTransfer.getData(POSTER_DRAG_MIME) || (draggingPosterId ?? "");
       setHover(false);
       endDrag();
-      if (posterId === null || posterId === "") return;
-      void onMovePoster(posterId, groupId);
+      if (sourceGroupId) {
+        if (sourceGroupId === groupId) return;
+        void onMoveGroup(sourceGroupId, groupId);
+        return;
+      }
+      if (posterId) void onMovePoster(posterId, groupId);
     },
   };
 
   return { hover, isDragging, dropHandlers };
+}
+
+function usePosterGroupDragHandle(groupId: string) {
+  const { beginGroupDrag, endDrag, draggingGroupId } = usePosterDrag();
+  const isDragging = draggingGroupId === groupId;
+
+  return {
+    isDragging,
+    handleProps: {
+      draggable: true,
+      onDragStart: (event: React.DragEvent) => {
+        // Don't let the gesture bubble to the poster rows inside the card.
+        event.stopPropagation();
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData(GROUP_DRAG_MIME, groupId);
+        beginGroupDrag(groupId);
+      },
+      onDragEnd: () => endDrag(),
+    },
+  };
 }
 
 function usePosterDragHandle(posterId: string) {
@@ -1383,8 +1523,6 @@ function PosterRow({
       </div>
 
       {!editing && (
-        // Labels collapse to icon-only on mobile so the three actions never crowd
-        // out (and clip) the poster name on a narrow row.
         <div className="flex shrink-0 items-center gap-3 sm:gap-2">
           <a
             href={`/api/posters/${poster.id}/pdf`}
@@ -1501,7 +1639,6 @@ function CreateSection({
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-start">
       <div className="space-y-8">
-        {/* Campaign + format options */}
         <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
           {campaigns.length > 1 && (
             <div className="min-w-0 space-y-1.5">
@@ -1564,7 +1701,6 @@ function CreateSection({
           )}
         </div>
 
-        {/* Create actions */}
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-foreground font-medium">Single poster</p>
@@ -1588,8 +1724,6 @@ function CreateSection({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-foreground font-medium shrink-0">Poster group</p>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-nowrap sm:items-center sm:justify-end">
-              {/* Reserve room on mobile for the absolutely-positioned size help
-                  below, so it can't overlap the create button stacked beneath. */}
               <div className="flex w-full items-start gap-2 pb-6 sm:w-auto sm:pb-0">
                 <div className="relative w-16 flex-none">
                   <label htmlFor="group-size-input" className="sr-only">
@@ -1634,11 +1768,11 @@ function CreateSection({
                   busy ||
                   campaignSlug === null ||
                   groupName.trim() === "" ||
-                  groupCount >= MAX_POSTERS_PER_USER / MAX_POSTERS_PER_GROUP
+                  groupCount >= MAX_GROUPS_PER_USER
                 }
                 title={
-                  groupCount >= MAX_POSTERS_PER_USER / MAX_POSTERS_PER_GROUP
-                    ? `You can have at most ${MAX_POSTERS_PER_USER / MAX_POSTERS_PER_GROUP} poster groups.`
+                  groupCount >= MAX_GROUPS_PER_USER
+                    ? `You can have at most ${MAX_GROUPS_PER_USER} poster groups.`
                     : undefined
                 }
               >
@@ -1760,9 +1894,6 @@ function VariantCombobox({
 function PosterPreview({ url, posterType }: { url: string; posterType: PosterStyle }) {
   const label = posterType === "a4" || posterType === "a4_bw" ? "A4 poster preview" : "Letter poster preview";
 
-  // Capped to the desktop column width so the preview stays a tidy thumbnail
-  // instead of ballooning to a full-width, screen-tall image on mobile, where the
-  // grid collapses to a single column.
   return (
     <div className="w-full max-w-[11rem] space-y-1.5">
       <p className="text-xs text-muted-foreground">Preview</p>
@@ -1943,7 +2074,6 @@ function VerifyModal({
         className="relative flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-[#0a0a0a] ring-1 ring-white/10 shadow-2xl sm:rounded-2xl"
         style={{ color: "#fff" }}
       >
-        {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-white/5 px-5 pb-4 pt-5">
           <div className="min-w-0">
             <p className="text-sm text-[color:#ffffffcc]">
@@ -1964,7 +2094,6 @@ function VerifyModal({
           </button>
         </div>
 
-        {/* Step indicator */}
         {step !== "done" && (
           <div className="flex gap-1.5 px-5 pt-4">
             <StepBar active={true} done={geoState.kind === "ok"} />
@@ -1973,7 +2102,6 @@ function VerifyModal({
           </div>
         )}
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 sm:py-6">
           {result ? (
             <ResultView result={result} />
@@ -1989,7 +2117,6 @@ function VerifyModal({
           )}
         </div>
 
-        {/* Footer */}
         {result !== null && (
           <div className="border-t border-white/5 px-5 pb-5 pt-3 sm:pb-6">
             <Button

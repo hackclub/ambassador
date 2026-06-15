@@ -140,7 +140,8 @@ export async function DetailedView({ activeRange }: { activeRange: ActivityRange
       poster_totals AS (
         SELECT DATE(created_at) AS day, COUNT(*)::int AS posters
         FROM posters
-        WHERE created_at >= CURRENT_DATE - ${rangeDays - 1} * INTERVAL '1 day'
+        WHERE deleted_at IS NULL
+          AND created_at >= CURRENT_DATE - ${rangeDays - 1} * INTERVAL '1 day'
         GROUP BY 1
       ),
       referral_totals AS (
@@ -205,6 +206,7 @@ export async function DetailedView({ activeRange }: { activeRange: ActivityRange
         COUNT(*) FILTER (WHERE verification_status = 'rejected')::int AS rejected_count,
         COUNT(*) FILTER (WHERE verification_status = 'digital')::int AS digital_count
       FROM posters
+      WHERE deleted_at IS NULL
     `,
     loadTopAmbassadors("all"),
   ]);

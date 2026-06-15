@@ -24,6 +24,7 @@ import {
   getUserPendingPosters,
   listUserPosterGroups,
   listUserPostersWithReferralCounts,
+  moveGroupPosters,
   movePosterToGroup,
   updatePosterGroupName,
   updatePosterGeo,
@@ -36,6 +37,7 @@ import { findMatchingPoster, readQrCodesFromImageBuffer } from "@/lib/posters/qr
 import { deletePosterProofFile, savePosterProofFile } from "@/lib/posters/storage";
 import { PosterRequestError } from "@/lib/posters/http";
 import {
+  MAX_GROUPS_PER_USER,
   MAX_POSTERS_PER_GROUP,
   MAX_POSTERS_PER_USER,
   parsePosterStyle,
@@ -159,10 +161,6 @@ async function persistPosterDecision(input: {
   return poster;
 }
 
-// Records the country the poster's coordinates fall in so the density map groups
-// it by location, not by the placer's (IP geolocated) account country. Strictly
-// best-effort: a geocoder hiccup must never fail a proof submission, and
-// scripts/backfill-poster-geo.mjs reverse-geocodes anything left null here.
 async function tagPosterLocationCountry(
   posterId: string,
   latitude?: number | null,
@@ -176,7 +174,7 @@ async function tagPosterLocationCountry(
       await updatePosterGeo(posterId, geo);
     }
   } catch {
-    // Leave the geo columns null; the backfill script will retry.
+    // Best-effort: leave geo null, the backfill script retries.
   }
 }
 
@@ -229,11 +227,6 @@ export type ClientPosterGroupDetail = {
   posters: ClientPosterListItem[];
 };
 
-/**
- * The client-safe projection of a poster. Internal-only fields on `PosterRow`
- * (qr_code_token, proof_*, coordinates, metadata, user_id, timestamps, …) never
- * cross to the browser; only the fields the UI actually renders do.
- */
 export function toClientPosterListItem(poster: PosterRow, scanCount = 0): ClientPosterListItem {
   return {
     id: poster.id,
@@ -319,9 +312,9 @@ export async function createPosterGroupForUser(
   },
 ) {
   const usage = await countUserPosterUsage(input.userId);
-  if (usage.groupCount >= MAX_POSTERS_PER_USER / MAX_POSTERS_PER_GROUP) {
+  if (usage.groupCount >= MAX_GROUPS_PER_USER) {
     throw new PosterRequestError(
-      `You can have at most ${MAX_POSTERS_PER_USER / MAX_POSTERS_PER_GROUP} poster groups.`,
+      `You can have at most ${MAX_GROUPS_PER_USER} poster groups.`,
       400,
     );
   }
@@ -424,6 +417,34 @@ export async function movePosterForUser(input: {
     throw new PosterRequestError("Poster not found.", 404);
   }
   return { poster: toClientPosterListItem(updated) };
+}
+
+export async function moveGroupForUser(input: {
+  userId: string;
+  sourceGroupId: string;
+  targetGroupId: string | null;
+}) {
+  const { group: source, posters } = await getPosterGroupForUserOrThrow(input.userId, input.sourceGroupId);
+
+  if (input.targetGroupId === source.id) {
+    return { moved: 0, sourceGroupId: source.id, targetGroupId: source.id };
+  }
+
+  if (input.targetGroupId !== null) {
+    const { posters: targetPosters } = await getPosterGroupForUserOrThrow(
+      input.userId,
+      input.targetGroupId,
+    );
+    if (targetPosters.length + posters.length > MAX_POSTERS_PER_GROUP) {
+      throw new PosterRequestError(
+        `Merging would exceed the ${MAX_POSTERS_PER_GROUP}-poster group limit.`,
+        400,
+      );
+    }
+  }
+
+  const moved = await moveGroupPosters(source.id, input.targetGroupId);
+  return { moved, sourceGroupId: source.id, targetGroupId: input.targetGroupId };
 }
 
 export async function renamePosterGroupForUser(
@@ -547,7 +568,18 @@ export async function getBulkPosterZipForUser(userId: string) {
   };
 }
 
-/** Strip a scan result down to the fields the uploader's client actually uses. */
+export async function getUnverifiedPosterPdfForUser(userId: string) {
+  const { groups, standalonePosters } = await listPosterDataForUser(userId);
+  const posters = [
+    ...standalonePosters,
+    ...groups.flatMap((g) => g.posters),
+  ].filter((poster) => poster.verification_status !== "success");
+  return {
+    pdf: await generateMergedPosterGroupPdf(posters),
+    count: posters.length,
+  };
+}
+
 export function toPublicScanResult(result: ScanMatchResult): PublicScanResult {
   const base = {
     status: result.status,

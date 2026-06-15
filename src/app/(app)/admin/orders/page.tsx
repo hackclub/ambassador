@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
+import { Timestamp } from "@/components/timestamp";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchBar } from "@/components/admin/search-bar";
 import { StatusFilter } from "@/components/admin/status-filter";
@@ -269,7 +270,7 @@ export default async function AdminOrdersPage({
                   ) : null}
                 </td>
                 <td className="px-4 py-4 font-body text-base leading-8 text-foreground">
-                  {new Date(order.created_at).toLocaleDateString(locale)}
+                  <Timestamp value={order.created_at} locale={locale} dateOnly />
                 </td>
                 <td className="px-4 py-4">
                   <Link

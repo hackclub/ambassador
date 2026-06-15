@@ -2,6 +2,7 @@ import {
   addPostersToGroupForUser,
   deletePosterGroupForUser,
   getPosterGroupForUserOrThrow,
+  moveGroupForUser,
   renamePosterGroupForUser,
   toClientPosterGroupDetail,
 } from "@/lib/posters/service";
@@ -75,7 +76,25 @@ export async function PATCH(request: Request, context: RouteContext<"/api/poster
     }
 
     const { id } = await context.params;
-    const body = (await request.json().catch(() => null)) as { name?: unknown } | null;
+    const body = (await request.json().catch(() => null)) as
+      | { action?: unknown; targetGroupId?: unknown; name?: unknown }
+      | null;
+
+    // Move/merge the whole group: targetGroupId is another group id, or null to
+    // send every poster back to ungrouped.
+    if (body?.action === "move") {
+      const target = body.targetGroupId;
+      if (target !== null && typeof target !== "string") {
+        return Response.json({ error: "Invalid target group." }, { status: 400 });
+      }
+      const result = await moveGroupForUser({
+        userId: session.sub,
+        sourceGroupId: id,
+        targetGroupId: target,
+      });
+      return Response.json(result);
+    }
+
     const rawName = body?.name;
     if (rawName !== null && typeof rawName !== "string" && rawName !== undefined) {
       return Response.json({ error: "Invalid name." }, { status: 400 });

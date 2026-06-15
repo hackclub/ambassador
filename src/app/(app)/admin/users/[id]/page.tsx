@@ -6,12 +6,13 @@ import { notFound } from "next/navigation";
 import { AdminLocalDateTime } from "@/components/admin/admin-local-time";
 import { ApproveWithGrantForm } from "@/components/admin/approve-with-grant-form";
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
-import { DetailFieldRow, DetailPager, DetailRow, DetailSection } from "@/components/admin/detail";
+import { DetailDateRow, DetailFieldRow, DetailPager, DetailRow, DetailSection } from "@/components/admin/detail";
 import { ExpandableImage } from "@/components/admin/expandable-image";
 import { HackatimeTrustStatus } from "@/components/admin/hackatime-trust-status";
 import { SlackAvatar, SlackProfile } from "@/components/admin/slack-profile";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { SuperuserPasswordForm } from "@/components/admin/superuser-password-form";
+import { Timestamp } from "@/components/timestamp";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { pillVariants } from "@/components/ui/pill";
@@ -323,7 +324,7 @@ export default async function AdminUserDetailPage({
         COUNT(*) FILTER (WHERE verification_status = 'rejected')::int AS rejected_count,
         COUNT(*) FILTER (WHERE verification_status = 'digital')::int AS digital_count
       FROM posters
-      WHERE user_id = ${user.id}
+      WHERE user_id = ${user.id} AND deleted_at IS NULL
     `.then((rows) => rows.at(0) ?? {
       total_count: 0,
       pending_count: 0,
@@ -338,7 +339,7 @@ export default async function AdminUserDetailPage({
              p.created_at
       FROM posters p
       LEFT JOIN poster_groups g ON g.id = p.poster_group_id
-      WHERE p.user_id = ${user.id}
+      WHERE p.user_id = ${user.id} AND p.deleted_at IS NULL
       ORDER BY p.created_at DESC, p.id DESC
       LIMIT ${POSTERS_PER_PAGE}
       OFFSET ${(postersPage - 1) * POSTERS_PER_PAGE}
@@ -787,17 +788,20 @@ export default async function AdminUserDetailPage({
             label="Last error"
             value={officeGrant?.lastError}
           />
-          <DetailFieldRow
+          <DetailDateRow
             label="Next retry"
-            value={formatDateTime(officeGrant?.nextRetryAt, locale)}
+            value={officeGrant?.nextRetryAt}
+            locale={locale}
           />
-          <DetailFieldRow
+          <DetailDateRow
             label="Balance synced"
-            value={formatDateTime(officeGrant?.balanceSyncedAt, locale)}
+            value={officeGrant?.balanceSyncedAt}
+            locale={locale}
           />
-          <DetailFieldRow
+          <DetailDateRow
             label="Linked at"
-            value={formatDateTime(officeGrant?.linkedAt, locale)}
+            value={officeGrant?.linkedAt}
+            locale={locale}
           />
 
           <div className="flex flex-wrap items-end gap-4">
@@ -892,7 +896,7 @@ export default async function AdminUserDetailPage({
                         t("admin.user-detail.notes.unknown-actor")}
                     </span>
                     <span className="text-xs text-secondary">
-                      {formatDateTime(entry.created_at, locale)}
+                      <Timestamp value={entry.created_at} locale={locale} />
                     </span>
                   </div>
                   <div className="mt-2 whitespace-pre-line font-body text-base text-foreground break-words [overflow-wrap:anywhere]">
@@ -991,8 +995,8 @@ export default async function AdminUserDetailPage({
         <DetailFieldRow label={t("admin.user-detail.profile-fields.last-seen-ip")} value={user.last_ip} mono />
         <DetailFieldRow label={t("admin.user-detail.profile-fields.admin")} value={user.is_admin === true ? t("common.yes") : t("common.no")} />
         <DetailFieldRow label={t("admin.user-detail.profile-fields.manual-dashboard-state")} value={manualDashboardStateLabel} />
-        <DetailFieldRow label={t("admin.user-detail.profile-fields.created")} value={formatDateTime(user.created_at, locale)} />
-        <DetailFieldRow label={t("admin.user-detail.profile-fields.updated")} value={formatDateTime(user.updated_at, locale)} />
+        <DetailDateRow label={t("admin.user-detail.profile-fields.created")} value={user.created_at} locale={locale} />
+        <DetailDateRow label={t("admin.user-detail.profile-fields.updated")} value={user.updated_at} locale={locale} />
       </DetailSection>
 
       <DetailSection
@@ -1013,7 +1017,7 @@ export default async function AdminUserDetailPage({
               <tbody>
                 {applications.map((application) => (
                   <tr key={application.id} className="border-b border-foreground last:border-b-0">
-                    <td className="px-0 py-4 font-body text-sm leading-8 text-foreground">{formatDateTime(application.created_at, locale)}</td>
+                    <td className="px-0 py-4 font-body text-sm leading-8 text-foreground"><Timestamp value={application.created_at} locale={locale} /></td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
                         <StatusBadge status={application.status} />
@@ -1055,8 +1059,8 @@ export default async function AdminUserDetailPage({
         {latestApplication ? (
           <>
             <DetailFieldRow label={t("admin.user-detail.latest-application-snapshot.application-id")} value={latestApplication.id} mono />
-            <DetailFieldRow label={t("admin.user-detail.latest-application-snapshot.submitted")} value={formatDateTime(latestApplication.created_at, locale)} />
-            <DetailFieldRow label={t("admin.user-detail.latest-application-snapshot.updated")} value={formatDateTime(latestApplication.updated_at, locale)} />
+            <DetailDateRow label={t("admin.user-detail.latest-application-snapshot.submitted")} value={latestApplication.created_at} locale={locale} />
+            <DetailDateRow label={t("admin.user-detail.latest-application-snapshot.updated")} value={latestApplication.updated_at} locale={locale} />
             <DetailFieldRow label={t("admin.user-detail.latest-application-snapshot.name-on-app")} value={latestApplication.name} />
             <DetailFieldRow label={t("admin.user-detail.latest-application-snapshot.date-of-birth")} value={formatDate(latestApplication.date_of_birth, locale)} />
             <DetailFieldRow label={t("admin.user-detail.latest-application-snapshot.decision-note")} value={latestApplication.decision_note} />
@@ -1070,7 +1074,7 @@ export default async function AdminUserDetailPage({
         title={t("admin.user-detail.sections.permanent-rejection.title")}
         description={t("admin.user-detail.sections.permanent-rejection.description")}
       >
-        <DetailFieldRow label={t("admin.user-detail.permanent-rejection.rejected-permanently-at")} value={formatDateTime(user.permanently_rejected_at, locale)} />
+        <DetailDateRow label={t("admin.user-detail.permanent-rejection.rejected-permanently-at")} value={user.permanently_rejected_at} locale={locale} />
         <DetailFieldRow label={t("admin.user-detail.permanent-rejection.permanent-note")} value={user.permanent_rejection_note} />
       </DetailSection>
 
@@ -1147,7 +1151,7 @@ export default async function AdminUserDetailPage({
                 <span className="font-body text-sm text-foreground">{order.id}</span>
                 <div className="flex items-center gap-3">
                   <StatusBadge status={order.status} />
-                  <span className="text-xs text-foreground">{formatDateTime(order.created_at, locale)}</span>
+                  <span className="text-xs text-foreground"><Timestamp value={order.created_at} locale={locale} /></span>
                 </div>
               </div>
             ))
@@ -1214,7 +1218,7 @@ export default async function AdminUserDetailPage({
                     return (
                       <tr key={poster.id} className="border-b border-foreground last:border-b-0">
                         <td className="px-0 py-4 font-body text-sm leading-8 text-foreground">
-                          {formatDateTime(poster.created_at, locale)}
+                          <Timestamp value={poster.created_at} locale={locale} />
                         </td>
                         <td className="px-4 py-4">
                           {proofUrl !== null ? (
@@ -1367,7 +1371,7 @@ export default async function AdminUserDetailPage({
                     return (
                       <tr key={referral.id} className="border-b border-foreground last:border-b-0">
                         <td className="px-0 py-4 font-body text-sm leading-8 text-foreground">
-                          {formatDateTime(referral.referred_at, locale)}
+                          <Timestamp value={referral.referred_at} locale={locale} />
                         </td>
                         <td className="px-4 py-4 font-body text-sm leading-8 text-foreground">
                           {referral.name}

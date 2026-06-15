@@ -1,7 +1,8 @@
 export const POSTER_STYLES = ["color", "bw", "printer_efficient", "a4", "a4_bw"] as const;
 const POSTER_REGION_CODE_PATTERN = /^[a-z]{2,8}$/;
-export const MAX_POSTERS_PER_GROUP = 50;
-export const MAX_POSTERS_PER_USER = 6250;
+export const MAX_POSTERS_PER_GROUP = 250;
+export const MAX_POSTERS_PER_USER = 31250;
+export const MAX_GROUPS_PER_USER = 625;
 
 export type PosterStyleBase = (typeof POSTER_STYLES)[number];
 export type PosterStyle = PosterStyleBase | `${PosterStyleBase}:${string}`;
@@ -81,6 +82,7 @@ export type PosterRow = {
   submitted_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  deleted_at: Date | null;
 };
 
 export type PosterTemplateCoordinates = {
@@ -131,12 +133,6 @@ export type VerifiedPosterDisplay = {
   groupName: string | null;
 };
 
-/**
- * The client only needs the outcome, detected codes, a message, and (on
- * success) the verified poster's display fields. Everything else on a
- * `PosterRow` (proof paths, QR tokens, coordinates, metadata) stays server
- * side and is never sent back to the uploader.
- */
 export type PublicScanResult = {
   status: ScanMatchResult["status"];
   detectedQrCodes: string[];

@@ -10,6 +10,7 @@ const CODE_LENGTH = 5;
 const CODE_PATTERN = /^a-[a-z0-9]{5}$/;
 const STARDANCE_BASE_URL = "https://stardance.hackclub.com";
 const MAX_STARDANCE_REFERRAL_LABEL_LENGTH = 80;
+const MAX_ACTIVE_REFERRAL_CODES = 500;
 
 let ensureStardanceReferralCodeFormatPromise: Promise<void> | null = null;
 
@@ -417,9 +418,9 @@ export async function restoreStardanceReferralCodeForUser(userId: string, codeId
     WHERE user_id = ${userId}
   `;
 
-  if (constraints !== undefined && Number.parseInt(constraints.active_count, 10) >= 100) {
+  if (constraints !== undefined && Number.parseInt(constraints.active_count, 10) >= MAX_ACTIVE_REFERRAL_CODES) {
     throw new StardanceReferralCodeError(
-      "You can have at most 100 active referral codes. Delete one to free up space.",
+      `You can have at most ${MAX_ACTIVE_REFERRAL_CODES} active referral codes. Delete one to free up space.`,
       400,
     );
   }
@@ -558,9 +559,9 @@ export async function createStardanceReferralCodeForUser(userId: string, rawLabe
     WHERE user_id = ${userId}
   `;
 
-  if (constraints !== undefined && Number.parseInt(constraints.active_count, 10) >= 100) {
+  if (constraints !== undefined && Number.parseInt(constraints.active_count, 10) >= MAX_ACTIVE_REFERRAL_CODES) {
     throw new StardanceReferralCodeError(
-      "You can have at most 100 active referral codes. Delete one to free up space.",
+      `You can have at most ${MAX_ACTIVE_REFERRAL_CODES} active referral codes. Delete one to free up space.`,
       400,
     );
   }
@@ -617,10 +618,6 @@ type StardanceReferralRow = {
   poster_referral_code: string | null;
 };
 
-// One entry from the `referrals` array of GET /ambassador_referrals?rsvp=true.
-// `isRsvp` splits the two shapes folded into that single array: pre-signup
-// RSVPs (rsvp-anchored, no verification/hours) and real signups (user-anchored,
-// carrying verification status, hours, and onboarding).
 type StardanceFeedReferral = {
   id: string;
   isRsvp: boolean;
@@ -709,8 +706,6 @@ function parseStardanceFeedReferral(value: unknown): StardanceFeedReferral | nul
     banned: value.banned === true,
     hoursLogged: parseFiniteHours(value.hours_logged),
     hoursApproved: parseFiniteHours(value.hours_approved),
-    // display_name and slack_id are not part of the merged feed yet; read them
-    // defensively so they flow through unchanged once stardance sends them.
     displayName: typeof value.display_name === "string" ? value.display_name : null,
     slackId: typeof value.slack_id === "string" ? value.slack_id : null,
     clickConfirmedAt: parseTimestamp(value.click_confirmed_at),
@@ -740,8 +735,6 @@ function deriveVerificationStatus(
 async function fetchAllStardanceRsvpReferrals(apiKey: string) {
   const baseUrl = optionalEnv("STARDANCE_API_BASE_URL") ?? STARDANCE_BASE_URL;
   const url = new URL("/api/v1/ambassador_referrals", baseUrl);
-  // ?rsvp=true folds pre-signup RSVPs into the same `referrals` array as real
-  // signups, each tagged with an `rsvp` boolean, so one call covers both.
   url.searchParams.set("rsvp", "true");
 
   const response = await fetch(url, {
@@ -799,11 +792,7 @@ function buildStardanceReferralRows(
 async function ingestStardanceRsvpReferralRows(rows: StardanceReferralUpsertRow[]) {
   if (rows.length === 0) return;
 
-  // Facts (name, contact details, hours, funnel timestamps) always refresh from
-  // the feed; only the status is special. It ratchets forward (rsvp ->
-  // unverified -> pending -> verified) and 'rejected' is terminal in both
-  // directions, so an admin rejection sticks and a stardance ineligibility
-  // always lands.
+  // Status ratchets forward (rsvp -> unverified -> pending -> verified); 'rejected' is terminal both ways.
   await sql`
     INSERT INTO stardance_referrals ${sql(rows)}
     ON CONFLICT (id) DO UPDATE
@@ -838,10 +827,7 @@ async function ingestStardanceRsvpReferralRows(rows: StardanceReferralUpsertRow[
       END
   `;
 
-  // Once a pre-signup RSVP person signs up the feed drops their RSVP and emits
-  // a `user:` row instead, so the old `rsvp:` row is superseded; drop it. Never
-  // touch a row a payout already references (payout_referrals.referral_id is
-  // ON DELETE CASCADE, so deleting it would erase the payout line).
+  // Drop an rsvp: row superseded by a user: row, but never one a payout references (CASCADE would erase the line).
   await sql`
     DELETE FROM stardance_referrals AS stale
     WHERE stale.id LIKE 'rsvp:%'
@@ -856,9 +842,7 @@ async function ingestStardanceRsvpReferralRows(rows: StardanceReferralUpsertRow[
       )
   `;
 
-  // Self-referrals (the referred contact is the ambassador themselves) are not
-  // payable; reject them. Match on the ambassador's own email or Slack id. The
-  // balance trigger claws back any credit a now-rejected referral had earned.
+  // Reject self-referrals (referred contact is the ambassador, by email or Slack id); the balance trigger claws back any credit.
   const userIds = [...new Set(rows.map((row) => row.user_id))];
   await sql`
     UPDATE stardance_referrals AS referral

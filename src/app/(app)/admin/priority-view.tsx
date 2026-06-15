@@ -85,6 +85,7 @@ export async function PriorityView({
               OR EXISTS (
                 SELECT 1 FROM posters p
                 WHERE p.user_id = u.id
+                  AND p.deleted_at IS NULL
                   AND p.created_at >= NOW() - INTERVAL '14 days'
               )
             ) AS active_recent
@@ -166,7 +167,7 @@ export async function PriorityView({
           SELECT COALESCE(
             LEAST(
               (SELECT MIN(DATE(referred_at)) FROM stardance_referrals),
-              (SELECT MIN(DATE(created_at)) FROM posters)
+              (SELECT MIN(DATE(created_at)) FROM posters WHERE deleted_at IS NULL)
             ),
             CURRENT_DATE
           ) AS start_date
@@ -185,6 +186,7 @@ export async function PriorityView({
             COUNT(*) FILTER (WHERE u.ambassador_region = 'United States')::int AS posters_us
           FROM posters p
           JOIN users u ON u.id = p.user_id
+          WHERE p.deleted_at IS NULL
           GROUP BY 1
         ),
         referral_totals AS (

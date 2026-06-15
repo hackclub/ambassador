@@ -6,12 +6,14 @@ import L from "leaflet";
 import { useEffect, useRef } from "react";
 import { ExternalLink } from "lucide-react";
 
+import { formatPosterLabel } from "@/lib/posters/format";
+
 import type { MapPoster } from "./poster-placement-map";
 
 function markerColor(status: string) {
-  if (status === "success") return "#16a34a"; // --acceptance
-  if (status === "rejected") return "#ec3750"; // --primary
-  return "#000000"; // pending -> --foreground
+  if (status === "success") return "#16a34a";
+  if (status === "rejected") return "#ec3750";
+  return "#000000";
 }
 
 export default function PosterPlacementMapInner({ posters }: { posters: MapPoster[] }) {
@@ -38,7 +40,7 @@ export default function PosterPlacementMapInner({ posters }: { posters: MapPoste
         fillOpacity: 0.85,
         weight: 2,
       }).addTo(map);
-      marker.bindPopup(escapeHtml(poster.name));
+      marker.bindPopup(escapeHtml(formatPosterLabel(poster)));
       markers.set(poster.id, marker);
     }
 
@@ -74,28 +76,44 @@ export default function PosterPlacementMapInner({ posters }: { posters: MapPoste
         style={{ zIndex: 0 }}
       />
       <ul className="max-h-80 space-y-1 overflow-y-auto pr-1">
-        {posters.map((poster) => (
-          <li key={poster.id} className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => focus(poster)}
-              className="ui-hover-underline min-w-0 flex-1 truncate text-left font-body text-sm text-foreground"
-              title="Zoom to this poster"
-            >
-              {poster.name}
-            </button>
-            <a
-              href={`https://www.openstreetmap.org/?mlat=${poster.latitude}&mlon=${poster.longitude}#map=17/${poster.latitude}/${poster.longitude}`}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Open in OpenStreetMap"
-              title="Open in a new tab"
-              className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ExternalLink size={14} />
-            </a>
-          </li>
-        ))}
+        {posters.map((poster) => {
+          const name = poster.name?.trim();
+          return (
+            <li key={poster.id} className="flex items-center gap-2">
+              <div className="min-w-0 flex-1 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => focus(poster)}
+                  className="ui-hover-underline flex w-max items-baseline gap-2 whitespace-nowrap text-left"
+                  title="Zoom to this poster"
+                >
+                  <span className="font-mono text-xs text-foreground">{poster.referralCode}</span>
+                  {name ? <span className="font-body text-sm text-foreground">{name}</span> : null}
+                  {poster.groupName?.trim() ? (
+                    <span className="font-body text-sm text-muted-foreground">
+                      ({poster.groupName.trim()})
+                    </span>
+                  ) : null}
+                  {poster.address?.trim() ? (
+                    <span className="font-body text-xs text-muted-foreground">
+                      · {poster.address.trim()}
+                    </span>
+                  ) : null}
+                </button>
+              </div>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${poster.latitude},${poster.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Open in Google Maps"
+                title="Open in a new tab"
+                className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ExternalLink size={14} />
+              </a>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

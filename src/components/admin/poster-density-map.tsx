@@ -29,12 +29,6 @@ export type PosterMapDatum = {
   countryName: string;
   state: string;
   isUS: boolean;
-  // Set only for the viewer's own posters on the ambassador map: marks the dot
-  // so it stands out and carries its label for the hover tooltip.
-  mine?: boolean;
-  label?: string;
-  // Set only on the admin map (for posters that belong to a group), so dots can
-  // be filtered by group.
   groupId?: string;
   groupName?: string | null;
   placedBy?: { id: string; name: string };
@@ -47,10 +41,7 @@ type PosterDensityMapMessages = {
   empty: string;
   dots: string;
   heatmap: string;
-  // Only needed in "zoom" interaction (the viewer-facing posters map).
   myRegion?: string;
-  // Only needed on the admin map, where dots carry their group: enables the
-  // group filter dropdown.
   allGroups?: string;
   untitledGroup?: string;
 };
@@ -68,31 +59,17 @@ export function PosterDensityMap({
   scope: "us" | "all" | "other";
   locale: string;
   messages: PosterDensityMapMessages;
-  // When set, dots open a popup with the placer and the poster's address
-  // (looked up through the admin-only address endpoint), so only pass it on
-  // admin surfaces.
   detailsMessages?: PosterMapDetailsMessages;
-  // "filter" (admin) hides every point outside the selection. "zoom" (the
-  // viewer-facing map) keeps all dots on screen and instead reframes the map on
-  // the selection, so a viewer can never accidentally hide other people's
-  // posters. Zoom mode also pins a "My region" entry (the viewer's own country)
-  // to the top of the dropdown.
   interaction?: "filter" | "zoom";
   myCountry?: string;
 }) {
   const zooming = interaction === "zoom";
-  // Zoom mode always offers "My region" as the default landing view. It doesn't
-  // depend on the viewer having a stored country: with one, it frames that
-  // country; without, focusPoints falls back to framing everyone, so the label
-  // is still honoured rather than silently dropping to "All countries".
   const supportsMyRegion = zooming && messages.myRegion !== undefined;
   const defaultSelected = supportsMyRegion ? "myregion" : "all";
   const [selected, setSelected] = useState(defaultSelected);
   const [selectedGroup, setSelectedGroup] = useState("all");
   const [mode, setMode] = useState<PosterMapMode>("dots");
-  // The region scope owns the coarse filter; reset the fine filters whenever it
-  // flips so a leftover state/country/group pick can't hide every point. Done as
-  // a during-render adjustment (not an effect) so the reset lands in the same pass.
+  // Reset the fine filters during render whenever the scope flips, so a stale pick can't hide every point.
   const [prevScope, setPrevScope] = useState(scope);
   if (scope !== prevScope) {
     setPrevScope(scope);
@@ -100,8 +77,6 @@ export function PosterDensityMap({
     setSelectedGroup("all");
   }
 
-  // The US scope drills into states; the others group by country. "other" never
-  // includes the US, which its scoped points already exclude.
   const usingStates = scope === "us";
 
   const scopedPoints = useMemo(() => {
@@ -112,10 +87,6 @@ export function PosterDensityMap({
 
   const numberFormatter = new Intl.NumberFormat(locale);
 
-  // Resolve a country's display name from its ISO code so the list reads as one
-  // consistent set of full names ("India", not "IN") regardless of whether the
-  // ambassador's stored country_name was ever filled in. Falls back to the
-  // stored name (then the raw code) for non-ISO values like the "XX" unknown.
   const countryLabel = useMemo(() => {
     let display: Intl.DisplayNames | null = null;
     try {
@@ -149,9 +120,6 @@ export function PosterDensityMap({
     return [...counts.values()].sort((a, b) => b.count - a.count);
   }, [scopedPoints, usingStates, countryLabel]);
 
-  // The group filter is admin-only (the ambassador map never carries other
-  // people's groups, so groupId is absent there). List every group that has a
-  // dot in scope, busiest first, mirroring the country dropdown.
   const groupOptions = useMemo(() => {
     const counts = new Map<string, { key: string; label: string; count: number }>();
     for (const point of scopedPoints) {
@@ -182,10 +150,7 @@ export function PosterDensityMap({
       : byRegion.filter((point) => point.groupId === selectedGroup);
   }, [scopedPoints, selected, usingStates, selectedGroup]);
 
-  // In zoom mode every dot stays rendered; the selection only chooses which
-  // subset the map reframes onto. An empty subset (e.g. "My region" before the
-  // viewer's country has any posters) falls back to framing everything so the
-  // map is never left staring at nothing.
+  // Empty subset (e.g. "My region" with no posters yet) falls back to framing everything.
   const focusPoints = useMemo(() => {
     if (!zooming) return undefined;
     if (selected === "all") return scopedPoints;
@@ -203,8 +168,6 @@ export function PosterDensityMap({
       <SectionHeading title={messages.title}>
         {scopedPoints.length > 0 ? (
           <>
-            {/* Segmented dots/heatmap switch, styled like the dashboard view
-                toggle: one bordered track, the active half filled solid. */}
             <div className="inline-flex items-stretch overflow-hidden rounded-xl border border-foreground bg-background">
               {([
                 { value: "dots", label: messages.dots },

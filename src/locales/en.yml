@@ -154,6 +154,9 @@ posters:
     empty: No verified posters have coordinates yet.
     dots: Dots
     heatmap: Heatmap
+  your-locations:
+    title: Where your posters are
+    description: Tap a poster to zoom to it, or open it in Google Maps.
   scan-prompt:
     title: "{count, plural, one {# poster} other {# posters}} ready to verify"
     body: Put them up as soon as possible, and be prepared to take a picture!
@@ -189,6 +192,11 @@ posters:
     create-poster: New poster
     create-group: New group
     download: Download
+    download-pdf: PDF
+    download-zip: ZIP
+    download-all-pdf: All posters (PDF)
+    download-all-zip: All posters (ZIP)
+    download-unverified: Unverified only (PDF)
     verify: Verify in the wild
     verify-group: Verify group
     cancel: Cancel
@@ -211,11 +219,15 @@ posters:
     rename-cancel: Cancel
     rename-placeholder: Poster name
     move-poster: "Drag poster {code} to a group"
+    move-group: "Drag group {name} to merge it into another group or ungroup it"
   groups:
     title: Poster groups
     empty: No groups yet. Create one to bundle multiple posters.
     count: "{count, plural, one {# poster} other {# posters}}"
     unnamed: Untitled group
+    move:
+      merge-confirm: "Merge all {count, plural, one {# poster} other {# posters}} from \"{name}\" into \"{target}\"? The \"{name}\" group will be removed."
+      ungroup-confirm: "Ungroup all {count, plural, one {# poster} other {# posters}} from \"{name}\"? They become standalone posters and the group is removed."
     name-placeholder: Group name (optional)
     size-label: How many posters?
     size-help: Enter a whole number from 0 to 50.
@@ -575,6 +587,16 @@ admin:
         title: Audit event
       breadcrumb: Audit log
       no-details: No additional details were recorded.
+      reverse:
+        title: Reverse
+        description: Bring the deleted poster back. Its referral code and QR token were reserved, so it returns exactly as it was.
+        action: Reverse deletion
+        confirm: Reverse this deletion and restore the poster?
+        already-restored: This poster has already been restored.
+        unavailable: This poster was removed before deletions could be reversed, so it can no longer be restored.
+        recreate-action: Recreate poster
+        recreate-note: This poster was deleted before deletions were reversible. It can be rebuilt from this record, but its proof photo, location, and scan history were not kept and will not come back.
+        recreate-confirm: Recreate this poster from the audit record? Its proof photo and location cannot be recovered.
       sections:
         event:
           title: Event

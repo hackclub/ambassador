@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
+import type { ReactNode } from "react";
 
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
 import { ExpandableImage } from "@/components/admin/expandable-image";
@@ -8,9 +9,9 @@ import { LineItemReview } from "@/components/admin/line-item-review";
 import { PayoutFulfilmentActions, PayoutReviewActions } from "@/components/admin/payout-review-actions";
 import { PayoutReviewModeClient } from "@/components/admin/payout-review-mode-client";
 import { PosterPlacementMap } from "@/components/admin/poster-placement-map";
+import { Timestamp } from "@/components/timestamp";
 import { buttonVariants } from "@/components/ui/button";
 import { pillVariants } from "@/components/ui/pill";
-import { formatDateTime } from "@/lib/format";
 import {
   formatUsdCents,
   getAdminPayout,
@@ -110,10 +111,13 @@ export default async function AdminPayoutReviewPage({
     .filter((p) => p.latitude !== null && p.longitude !== null)
     .map((p) => ({
       id: p.id,
-      name: formatPosterLabel(p),
+      name: p.name,
+      referralCode: p.referralCode,
+      groupName: p.groupName,
       latitude: p.latitude as number,
       longitude: p.longitude as number,
       status: p.verificationStatus,
+      address: p.locationDescription,
     }));
 
   return (
@@ -159,7 +163,11 @@ export default async function AdminPayoutReviewPage({
               ? isManual
                 ? "A fixed amount, set when this payout was created. Their balance is not involved."
                 : "The full balance. Approving or rejecting items below changes it."
-              : `Reviewed ${payout.reviewedAt ? formatDateTime(payout.reviewedAt, locale) : ""}.`}
+              : (
+                <>
+                  Reviewed{payout.reviewedAt ? <> <Timestamp value={payout.reviewedAt} locale={locale} /></> : null}.
+                </>
+              )}
           </p>
           {payout.status === PAYOUT_STATUS_APPROVED ? (
             <a
@@ -363,7 +371,7 @@ export default async function AdminPayoutReviewPage({
                   <span className="text-foreground">
                     {entry.publicNote ?? entry.note ?? entry.reason.replaceAll("_", " ")}
                     <span className="block text-xs text-muted-foreground">
-                      {formatDateTime(entry.createdAt, locale)}
+                      <Timestamp value={entry.createdAt} locale={locale} />
                     </span>
                   </span>
                   <span className={entry.amountCents < 0 ? "text-primary" : "text-acceptance"}>
@@ -415,7 +423,7 @@ export default async function AdminPayoutReviewPage({
                 <div key={note.id}>
                   <p className="font-body text-base whitespace-pre-line text-foreground">{note.note}</p>
                   <p className="mt-1 font-body text-xs text-muted-foreground">
-                    {note.authorName ?? "Unknown admin"} · {formatDateTime(note.createdAt, locale)}
+                    {note.authorName ?? "Unknown admin"} · <Timestamp value={note.createdAt} locale={locale} />
                   </p>
                 </div>
               ))}
@@ -454,7 +462,9 @@ export default async function AdminPayoutReviewPage({
           <section>
             <h2 className="text-xl text-foreground">Fulfilment</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field label="Reviewed" value={payout.reviewedAt ? formatDateTime(payout.reviewedAt, locale) : null} />
+              <Field label="Reviewed">
+                {payout.reviewedAt ? <Timestamp value={payout.reviewedAt} locale={locale} /> : "-"}
+              </Field>
               {payout.transferLink ? (
                 <div className="sm:col-span-2">
                   <div className="text-xs text-secondary">Transfer link</div>
@@ -491,17 +501,19 @@ export default async function AdminPayoutReviewPage({
 function Field({
   label,
   value,
+  children,
   className,
 }: {
   label: string;
-  value: string | null;
+  value?: string | null;
+  children?: ReactNode;
   className?: string;
 }) {
   return (
     <div className={className}>
       <div className="text-xs text-secondary">{label}</div>
       <div className="mt-1 break-words whitespace-pre-line font-body text-base text-foreground">
-        {value && value.trim() !== "" ? value : "-"}
+        {children ?? (value && value.trim() !== "" ? value : "-")}
       </div>
     </div>
   );

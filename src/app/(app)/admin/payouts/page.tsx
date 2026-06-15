@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 
 import { ManualPayoutForm } from "@/components/admin/manual-payout-form";
+import { Timestamp } from "@/components/timestamp";
 import { pillVariants } from "@/components/ui/pill";
-import { formatDateTime } from "@/lib/format";
 import {
   formatUsdCents,
   listAdminPayouts,
@@ -118,7 +118,7 @@ function PayoutTable({
               <td className="py-4 pr-4 leading-8 text-foreground">{formatUsdCents(payout.amountCents)}</td>
               <td className="py-4 pr-4 leading-8 text-foreground">{payout.bankTransferMethod}</td>
               <td className="py-4 pr-4 leading-8 text-muted-foreground">
-                {formatDateTime(payout.submittedAt, locale)}
+                <Timestamp value={payout.submittedAt} locale={locale} />
               </td>
               <td className="py-4 pr-4 leading-8">
                 <span className={pillVariants({ tone: STATUS_TONE[payout.status] })}>

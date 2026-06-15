@@ -44,10 +44,11 @@ export async function GET(request: Request) {
     sql<CostRow[]>`
       SELECT
         (SELECT COUNT(*) FROM posters
-          WHERE verification_status = 'success')::int AS poster_count,
+          WHERE verification_status = 'success' AND deleted_at IS NULL)::int AS poster_count,
         (SELECT COUNT(*) FROM posters
           JOIN users ON users.id = posters.user_id
           WHERE posters.verification_status = 'success'
+            AND posters.deleted_at IS NULL
             AND users.ambassador_region = 'United States')::int AS poster_count_us,
         (SELECT COUNT(*) FROM stardance_referrals
           WHERE verification_status = 'verified')::int AS referral_count,

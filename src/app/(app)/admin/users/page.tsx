@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { Timestamp } from "@/components/timestamp";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchBar } from "@/components/admin/search-bar";
 import { StatusFilter } from "@/components/admin/status-filter";
@@ -179,7 +180,7 @@ export default async function AdminUsersPage({
                   )}
                 </td>
                 <td className="px-4 py-4 font-body text-base leading-8 text-foreground">
-                  {new Date(user.created_at).toLocaleDateString(locale)}
+                  <Timestamp value={user.created_at} locale={locale} dateOnly />
                 </td>
                 <td className="px-4 py-4">
                   <Link

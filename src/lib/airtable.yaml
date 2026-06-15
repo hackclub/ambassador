@@ -191,6 +191,12 @@ tables:
       longitude:
         id: fldTA4CXjwcX0cjry
         name: longitude
+      googleMapsUrl:
+        id: fldBzKS2jLxSFyRsP
+        name: google-maps
+      appleMapsUrl:
+        id: fldEre27yl24jnqZT
+        name: apple-maps
   meetupParticipants:
     id: tblo7Pcv4TfeYUbBX
     name: meetup-participants

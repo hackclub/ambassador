@@ -2,7 +2,7 @@ name: "ci: poster translations"
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   validate-translations:
-    if: contains(github.event.pull_request.labels.*.name, 'Translation')
     runs-on: ubuntu-latest
 
     steps:
@@ -20,14 +19,13 @@ jobs:
           fetch-depth: 0
 
       - name: Collect poster files changed in this PR
+        id: collect
         shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          # Files this PR actually touches under public/posters. Problems on
-          # these fail the check; problems on any other regional poster only
-          # warn, so an unrelated broken region cannot block the PR.
+          # Runs on every PR, not a "Translation" label: a labeler GITHUB_TOKEN never fires a retriggering `labeled` event.
           if git diff --name-only "$BASE_SHA" HEAD -- 'public/posters/**' > changed-posters.txt; then
             echo "Changed poster files in this PR:"
             cat changed-posters.txt
@@ -35,8 +33,15 @@ jobs:
             echo "::warning::Could not diff against the base; treating all poster problems as warnings."
             : > changed-posters.txt
           fi
+          if [ -s changed-posters.txt ]; then
+            echo "has_posters=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_posters=false" >> "$GITHUB_OUTPUT"
+            echo "No poster files changed in this PR; skipping poster validation."
+          fi
 
       - name: Validate regional poster files
+        if: steps.collect.outputs.has_posters == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -94,7 +99,6 @@ jobs:
               done
             done
 
-            # Reject any file that doesn't match the naming scheme.
             mapfile -t stray < <(
               find "$regionals_dir" -maxdepth 1 -type f \
                 -regextype posix-extended \
@@ -131,6 +135,7 @@ jobs:
           echo "Poster translation validation passed."
 
       - name: Scan changed posters with VirusTotal
+        if: steps.collect.outputs.has_posters == 'true'
         shell: bash
         env:
           VT_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
@@ -154,8 +159,7 @@ jobs:
           size=$(stat -c%s posters-pr.zip)
           echo "Zipped ${#posters[@]} poster file(s) into posters-pr.zip ($size bytes)."
 
-          # VirusTotal accepts direct upload up to 32 MiB; larger files need a
-          # one-time upload URL.
+          # VirusTotal direct upload caps at 32 MiB; larger files need a one-time upload URL.
           if [ "$size" -le 33554432 ]; then
             resp=$(curl -sS -X POST https://www.virustotal.com/api/v3/files \
               -H "x-apikey: $VT_API_KEY" -F "file=@posters-pr.zip")

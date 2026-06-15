@@ -1,4 +1,8 @@
-import { getBulkPosterPdfForUser, getBulkPosterZipForUser } from "@/lib/posters/service";
+import {
+  getBulkPosterPdfForUser,
+  getBulkPosterZipForUser,
+  getUnverifiedPosterPdfForUser,
+} from "@/lib/posters/service";
 import { posterErrorResponse, requirePosterSession } from "@/lib/posters/http";
 import { checkRateLimit, getRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
 
@@ -19,8 +23,10 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const format = searchParams.get("format") === "zip" ? "zip" : "pdf";
+    const unverifiedOnly = searchParams.get("scope") === "unverified";
 
-    if (format === "zip") {
+    // The unverified scope is PDF-only (one printable sheet of what's left).
+    if (format === "zip" && !unverifiedOnly) {
       const { zip, count } = await getBulkPosterZipForUser(session.sub);
       if (count === 0) {
         return Response.json({ error: "No posters to download." }, { status: 404 });
@@ -33,14 +39,19 @@ export async function GET(request: Request) {
       });
     }
 
-    const { pdf, count } = await getBulkPosterPdfForUser(session.sub);
+    const { pdf, count } = unverifiedOnly
+      ? await getUnverifiedPosterPdfForUser(session.sub)
+      : await getBulkPosterPdfForUser(session.sub);
     if (count === 0) {
-      return Response.json({ error: "No posters to download." }, { status: 404 });
+      return Response.json(
+        { error: unverifiedOnly ? "No unverified posters to download." : "No posters to download." },
+        { status: 404 },
+      );
     }
     return new Response(pdf, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="all-posters.pdf"`,
+        "Content-Disposition": `attachment; filename="${unverifiedOnly ? "unverified-posters" : "all-posters"}.pdf"`,
       },
     });
   } catch (error) {

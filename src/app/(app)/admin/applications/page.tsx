@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { Timestamp } from "@/components/timestamp";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchBar } from "@/components/admin/search-bar";
 import { SortToggle } from "@/components/admin/sort-toggle";
@@ -271,7 +272,7 @@ export default async function AdminApplicationsPage({
                         : "-"}
                   </td>
                   <td className="px-4 py-4 font-body text-base leading-8 text-foreground">
-                    {new Date(application.created_at).toLocaleDateString(locale)}
+                    <Timestamp value={application.created_at} locale={locale} dateOnly />
                   </td>
                   <td className="px-4 py-4">
                     <Link

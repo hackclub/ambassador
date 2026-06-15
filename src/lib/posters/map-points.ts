@@ -1,6 +1,6 @@
+import type { MapPoster } from "@/components/admin/poster-placement-map";
 import type { PosterMapDatum } from "@/components/admin/poster-density-map";
 import sql from "@/lib/database/client";
-import { formatPosterLabel } from "@/lib/posters/format";
 
 type PosterPointRow = {
   id: string;
@@ -12,26 +12,12 @@ type PosterPointRow = {
   is_us: boolean | null;
   user_id: string | null;
   placed_by: string | null;
-  name: string | null;
-  referral_code: string;
   poster_group_id: string | null;
   group_name: string | null;
 };
 
-// Every verified poster with coordinates, for the density maps. The map groups
-// US points by state and the rest by country, so carry both names plus the
-// program-region US flag the admin dashboard scope filters on. Country/state
-// come from where the poster's coordinates actually fall (geo_*, reverse
-// geocoded on submit or by the backfill), falling back to the placer's account
-// location until a row is geocoded, so the per-country list matches the dots.
-// The placer is only attached for the admin map; the ambassador-facing map
-// stays anonymous. When `viewerId` is set, that viewer's own posters carry a
-// label so the ambassador map can mark them and show their name on hover; other
-// people's posters never carry one, so nothing identifying leaves the server.
-// The admin map (`includePlacer`) also carries each poster's group so it can be
-// filtered by group; the ambassador map never sees other people's groups.
 export async function loadPosterMapPoints(
-  { includePlacer = false, viewerId }: { includePlacer?: boolean; viewerId?: string } = {},
+  { includePlacer = false }: { includePlacer?: boolean } = {},
 ): Promise<PosterMapDatum[]> {
   const rows = await sql<PosterPointRow[]>`
     SELECT
@@ -44,44 +30,82 @@ export async function loadPosterMapPoints(
       (u.ambassador_region = 'United States') AS is_us,
       u.id AS user_id,
       u.display_name AS placed_by,
-      p.name,
-      p.referral_code,
       p.poster_group_id,
       g.name AS group_name
     FROM posters p
     LEFT JOIN users u ON u.id = p.user_id
     LEFT JOIN poster_groups g ON g.id = p.poster_group_id
     WHERE p.verification_status = 'success'
+      AND p.deleted_at IS NULL
       AND p.latitude IS NOT NULL
       AND p.longitude IS NOT NULL
   `;
 
+  return rows.map((row) => ({
+    id: row.id,
+    lat: Number(row.lat),
+    lng: Number(row.lng),
+    country: row.country_code,
+    countryName: row.country_name,
+    state: row.state,
+    isUS: row.is_us === true,
+    ...(includePlacer && row.user_id !== null && row.placed_by !== null
+      ? { placedBy: { id: row.user_id, name: row.placed_by } }
+      : {}),
+    ...(includePlacer && row.poster_group_id !== null
+      ? { groupId: row.poster_group_id, groupName: row.group_name }
+      : {}),
+  }));
+}
+
+type OwnPlacementRow = {
+  id: string;
+  name: string | null;
+  referral_code: string;
+  group_name: string | null;
+  status: string;
+  lat: number | string;
+  lng: number | string;
+  location_description: string | null;
+  geocoded_address: string | null;
+  geo_state: string | null;
+  geo_country_name: string | null;
+};
+
+export async function loadOwnPosterPlacements(userId: string): Promise<MapPoster[]> {
+  const rows = await sql<OwnPlacementRow[]>`
+    SELECT
+      p.id,
+      p.name,
+      p.referral_code,
+      g.name AS group_name,
+      p.verification_status AS status,
+      p.latitude AS lat,
+      p.longitude AS lng,
+      p.location_description,
+      NULLIF(TRIM(p.metadata->>'reverse_geocoded_address'), '') AS geocoded_address,
+      NULLIF(TRIM(p.geo_state), '') AS geo_state,
+      NULLIF(TRIM(p.geo_country_name), '') AS geo_country_name
+    FROM posters p
+    LEFT JOIN poster_groups g ON g.id = p.poster_group_id
+    WHERE p.user_id = ${userId}
+      AND p.deleted_at IS NULL
+      AND p.latitude IS NOT NULL
+      AND p.longitude IS NOT NULL
+    ORDER BY p.created_at DESC
+  `;
+
   return rows.map((row) => {
-    const mine = viewerId !== undefined && row.user_id === viewerId;
+    const coarse = [row.geo_state, row.geo_country_name].filter(Boolean).join(", ");
     return {
       id: row.id,
-      lat: Number(row.lat),
-      lng: Number(row.lng),
-      country: row.country_code,
-      countryName: row.country_name,
-      state: row.state,
-      isUS: row.is_us === true,
-      ...(mine
-        ? {
-            mine: true,
-            label: formatPosterLabel({
-              name: row.name,
-              referralCode: row.referral_code,
-              groupName: row.group_name,
-            }),
-          }
-        : {}),
-      ...(includePlacer && row.user_id !== null && row.placed_by !== null
-        ? { placedBy: { id: row.user_id, name: row.placed_by } }
-        : {}),
-      ...(includePlacer && row.poster_group_id !== null
-        ? { groupId: row.poster_group_id, groupName: row.group_name }
-        : {}),
+      name: row.name,
+      referralCode: row.referral_code,
+      groupName: row.group_name,
+      status: row.status,
+      latitude: Number(row.lat),
+      longitude: Number(row.lng),
+      address: row.geocoded_address || (coarse !== "" ? coarse : null) || row.location_description?.trim() || null,
     };
   });
 }

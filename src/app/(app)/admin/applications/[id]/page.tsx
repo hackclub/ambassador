@@ -6,10 +6,11 @@ import { notFound } from "next/navigation";
 import { DeleteApplicationButton } from "@/components/admin/delete-application-button";
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
 import { AdminLocalDateTime } from "@/components/admin/admin-local-time";
-import { DetailFieldRow, DetailPager, DetailRow, DetailSection } from "@/components/admin/detail";
+import { DetailDateRow, DetailFieldRow, DetailPager, DetailRow, DetailSection } from "@/components/admin/detail";
 import { HackatimeTrustStatus } from "@/components/admin/hackatime-trust-status";
 import { SlackAvatar, SlackProfile } from "@/components/admin/slack-profile";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { Timestamp } from "@/components/timestamp";
 import { buttonVariants } from "@/components/ui/button";
 import { pillVariants } from "@/components/ui/pill";
 import { Textarea } from "@/components/ui/textarea";
@@ -457,6 +458,8 @@ export default async function AdminApplicationDetailPage({
         description={t("admin.application-detail.sections.application-answers.description")}
       >
         <DetailFieldRow label={t("admin.application-detail.answers.name")} value={application.name} />
+        {/* Date of birth is a calendar date, not an instant - never shift it into
+            the reader's timezone (that can roll it back a day). */}
         <DetailFieldRow
           label={t("admin.application-detail.answers.date-of-birth")}
           value={formatDate(application.date_of_birth, locale)}
@@ -500,9 +503,9 @@ export default async function AdminApplicationDetailPage({
         title={t("admin.application-detail.sections.application-metadata.title")}
         description={t("admin.application-detail.sections.application-metadata.description")}
       >
-        <DetailFieldRow label={t("admin.application-detail.metadata.submitted")} value={formatDateTime(application.created_at, locale)} />
-        <DetailFieldRow label={t("admin.application-detail.metadata.last-updated")} value={formatDateTime(application.updated_at, locale)} />
-        <DetailFieldRow label={t("admin.application-detail.metadata.reviewed")} value={formatDateTime(application.reviewed_at, locale)} />
+        <DetailDateRow label={t("admin.application-detail.metadata.submitted")} value={application.created_at} locale={locale} />
+        <DetailDateRow label={t("admin.application-detail.metadata.last-updated")} value={application.updated_at} locale={locale} />
+        <DetailDateRow label={t("admin.application-detail.metadata.reviewed")} value={application.reviewed_at} locale={locale} />
         <DetailFieldRow label={t("admin.application-detail.metadata.reviewed-by")} value={application.reviewed_by_name} />
         <DetailFieldRow label={t("admin.application-detail.metadata.airtable-record-id")} value={application.airtable_record_id} mono />
         <DetailFieldRow label={t("admin.application-detail.metadata.submitted-ip")} value={application.submitted_ip} mono />
@@ -595,7 +598,7 @@ export default async function AdminApplicationDetailPage({
         <DetailFieldRow label={t("admin.application-detail.applicant-fields.timezone")} value={application.user_timezone} mono />
         <DetailFieldRow label={t("admin.application-detail.applicant-fields.network-org")} value={application.user_org} />
         <DetailFieldRow label={t("admin.application-detail.applicant-fields.last-seen-ip")} value={application.user_last_ip} mono />
-        <DetailFieldRow label={t("admin.application-detail.applicant-fields.user-created")} value={formatDateTime(application.user_created_at, locale)} />
+        <DetailDateRow label={t("admin.application-detail.applicant-fields.user-created")} value={application.user_created_at} locale={locale} />
       </DetailSection>
 
       <DetailSection
@@ -615,7 +618,7 @@ export default async function AdminApplicationDetailPage({
             <tbody>
               {history.map((entry) => (
                 <tr key={entry.id} className="border-b border-foreground last:border-b-0">
-                  <td className="px-0 py-4 font-body text-sm leading-8 text-foreground">{formatDateTime(entry.created_at, locale)}</td>
+                  <td className="px-0 py-4 font-body text-sm leading-8 text-foreground"><Timestamp value={entry.created_at} locale={locale} /></td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       <StatusBadge status={entry.status} />
@@ -696,7 +699,7 @@ export default async function AdminApplicationDetailPage({
                 <span className="font-body text-sm text-foreground">{order.id}</span>
                 <div className="flex items-center gap-3">
                   <StatusBadge status={order.status} />
-                  <span className="text-xs text-foreground">{formatDateTime(order.created_at, locale)}</span>
+                  <span className="text-xs text-foreground"><Timestamp value={order.created_at} locale={locale} /></span>
                 </div>
               </div>
             ))

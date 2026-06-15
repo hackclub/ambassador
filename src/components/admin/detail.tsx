@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Timestamp } from "@/components/timestamp";
 import { cn } from "@/lib/utils";
 
 export function DetailSection({
@@ -49,6 +50,28 @@ export function DetailFieldRow({
         )}
       >
         {displayValue}
+      </div>
+    </DetailRow>
+  );
+}
+
+export function DetailDateRow({
+  label,
+  value,
+  locale,
+  dateOnly,
+  emptyValue = "-",
+}: {
+  label: string;
+  value: string | number | Date | null | undefined;
+  locale: string;
+  dateOnly?: boolean;
+  emptyValue?: string;
+}) {
+  return (
+    <DetailRow label={label}>
+      <div className="font-body text-base break-words text-foreground [overflow-wrap:anywhere]">
+        <Timestamp value={value} locale={locale} dateOnly={dateOnly} empty={emptyValue} />
       </div>
     </DetailRow>
   );

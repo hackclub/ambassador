@@ -9,6 +9,7 @@ export type AdminActionEvent =
   | "global_safeguard_updated"
   | "application_tshirt_sent_updated"
   | "poster_deleted"
+  | "poster_deletion_reverted"
   | "poster_group_deleted"
   | "poster_rejected_by_admin"
   | "poster_approved_by_admin"

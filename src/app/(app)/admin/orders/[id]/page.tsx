@@ -4,7 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
-import { DetailFieldRow, DetailSection } from "@/components/admin/detail";
+import { DetailDateRow, DetailFieldRow, DetailSection } from "@/components/admin/detail";
 import { SlackAvatar } from "@/components/admin/slack-profile";
 import { buttonVariants } from "@/components/ui/button";
 import { pillVariants } from "@/components/ui/pill";
@@ -305,13 +305,15 @@ export default async function AdminOrderDetailPage({
           label={t("admin.order-detail.fields.service")}
           value={warehousePayload?.service}
         />
-        <DetailFieldRow
+        <DetailDateRow
           label={t("admin.order-detail.fields.dispatched-at")}
-          value={formatDateTime(warehousePayload?.dispatched_at ?? null, locale)}
+          value={warehousePayload?.dispatched_at ?? null}
+          locale={locale}
         />
-        <DetailFieldRow
+        <DetailDateRow
           label={t("admin.order-detail.fields.mailed-at")}
-          value={formatDateTime(warehousePayload?.mailed_at ?? null, locale)}
+          value={warehousePayload?.mailed_at ?? null}
+          locale={locale}
         />
         <DetailFieldRow
           label={t("admin.order-detail.fields.warehouse-tags")}
@@ -354,21 +356,25 @@ export default async function AdminOrderDetailPage({
         title={t("admin.order-detail.sections.metadata.title")}
         description={t("admin.order-detail.sections.metadata.description")}
       >
-        <DetailFieldRow
+        <DetailDateRow
           label={t("admin.order-detail.fields.placed")}
-          value={formatDateTime(order.created_at, locale)}
+          value={order.created_at}
+          locale={locale}
         />
-        <DetailFieldRow
+        <DetailDateRow
           label={t("admin.order-detail.fields.last-updated")}
-          value={formatDateTime(order.updated_at, locale)}
+          value={order.updated_at}
+          locale={locale}
         />
-        <DetailFieldRow
+        <DetailDateRow
           label={t("admin.order-detail.fields.dispatch-at")}
-          value={formatDateTime(order.dispatch_at, locale)}
+          value={order.dispatch_at}
+          locale={locale}
         />
-        <DetailFieldRow
+        <DetailDateRow
           label={t("admin.order-detail.fields.reviewed")}
-          value={formatDateTime(order.reviewed_at, locale)}
+          value={order.reviewed_at}
+          locale={locale}
         />
         <DetailFieldRow
           label={t("admin.order-detail.fields.reviewed-by")}

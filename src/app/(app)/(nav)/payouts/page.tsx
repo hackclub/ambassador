@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { forbidden, redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 
+import { Timestamp } from "@/components/timestamp";
 import { Pagination } from "@/components/ui/pagination";
 import { pillVariants } from "@/components/ui/pill";
-import { formatDateTime } from "@/lib/format";
 import {
   formatUsdCents,
   listBalanceTransactionsForUser,
@@ -155,7 +155,7 @@ export default async function PayoutsPage({
                       </span>
                     </p>
                     <p className="font-body text-xs text-muted-foreground">
-                      {formatDateTime(payout.submittedAt, locale)}
+                      <Timestamp value={payout.submittedAt} locale={locale} />
                     </p>
                     {payout.publicComment ? (
                       <p className="mt-1 font-body text-sm text-foreground">{payout.publicComment}</p>
@@ -198,7 +198,7 @@ export default async function PayoutsPage({
                       {tx.publicNote ?? REASON_LABEL[tx.reason] ?? tx.reason.replaceAll("_", " ")}
                     </p>
                     <p className="font-body text-xs text-muted-foreground">
-                      {formatDateTime(tx.createdAt, locale)}
+                      <Timestamp value={tx.createdAt} locale={locale} />
                     </p>
                   </div>
                   <div className="text-right">

@@ -6,7 +6,8 @@ import { SearchBar } from "@/components/admin/search-bar";
 import { SortToggle } from "@/components/admin/sort-toggle";
 import { Pagination } from "@/components/ui/pagination";
 import { EventTypeFilter, UserMultiSelect } from "@/components/admin/audit-log-filters";
-import { LocalDateTime } from "@/components/admin/local-date-time";
+import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
+import { Timestamp } from "@/components/timestamp";
 import { getTranslatedPageMetadata } from "@/i18n/metadata";
 import {
   formatAuditEventSummary,
@@ -25,6 +26,7 @@ type AuditLogRow = {
   created_at: string;
   actor_display_name: string | null;
   target_display_name: string | null;
+  revert_kind: "reverse" | "recreate" | null;
 };
 
 type AuditLogResultRow = {
@@ -92,10 +94,22 @@ export default async function AdminAuditLogPage({
         SELECT
           e.id, e.actor_user_id, e.target_user_id, e.action, e.metadata, e.created_at,
           actor.display_name AS actor_display_name,
-          target.display_name AS target_display_name
+          target.display_name AS target_display_name,
+          CASE
+            WHEN e.action <> 'poster_deleted' THEN NULL
+            WHEN dp.id IS NOT NULL AND dp.deleted_at IS NOT NULL THEN 'reverse'
+            WHEN dp.id IS NULL
+              AND e.target_user_id IS NOT NULL
+              AND NULLIF(e.metadata->>'referralCode', '') IS NOT NULL
+              AND NULLIF(e.metadata->>'campaignSlug', '') IS NOT NULL THEN 'recreate'
+            ELSE NULL
+          END AS revert_kind
         FROM admin_action_events e
         LEFT JOIN users actor ON actor.id = e.actor_user_id
         LEFT JOIN users target ON target.id = e.target_user_id
+        LEFT JOIN posters dp
+          ON e.action = 'poster_deleted'
+          AND dp.id = (e.metadata->>'posterId')
         WHERE (${searchFilter}::text IS NULL OR (
           actor.display_name ILIKE ${searchFilter}
           OR actor.email ILIKE ${searchFilter}
@@ -215,16 +229,36 @@ export default async function AdminAuditLogPage({
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-4 py-4 font-body text-base leading-8 text-foreground">
-                  <LocalDateTime value={event.created_at} locale={locale} />
+                  <Timestamp value={event.created_at} locale={locale} />
                 </td>
                 <td className="px-4 py-4">
-                  <Link
-                    href={`/admin/audit-log/${event.id}`}
-                    aria-label={t("admin.audit-log.view-event")}
-                    className="ui-open-link inline-flex font-body text-lg leading-none"
-                  >
-                    <span aria-hidden="true">↗</span>
-                  </Link>
+                  <div className="flex items-center gap-3 whitespace-nowrap">
+                    {event.revert_kind !== null ? (
+                      <ConfirmSubmitForm
+                        action={`/api/admin/audit-log/${event.id}/revert`}
+                        method="POST"
+                        confirmationMessage={
+                          event.revert_kind === "recreate"
+                            ? t("admin.audit-log.event-detail.reverse.recreate-confirm")
+                            : t("admin.audit-log.event-detail.reverse.confirm")
+                        }
+                      >
+                        <input type="hidden" name="redirectTo" value="/admin/audit-log" />
+                        <button className="ui-hover-underline font-body text-sm text-primary">
+                          {event.revert_kind === "recreate"
+                            ? t("admin.audit-log.event-detail.reverse.recreate-action")
+                            : t("admin.audit-log.event-detail.reverse.action")}
+                        </button>
+                      </ConfirmSubmitForm>
+                    ) : null}
+                    <Link
+                      href={`/admin/audit-log/${event.id}`}
+                      aria-label={t("admin.audit-log.view-event")}
+                      className="ui-open-link inline-flex font-body text-lg leading-none"
+                    >
+                      <span aria-hidden="true">↗</span>
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}

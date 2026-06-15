@@ -17,6 +17,7 @@ const EVENT_LABELS: Record<AdminActionEvent, string> = {
   global_safeguard_updated: "Global safeguard updated",
   hcb_credentials_reauthorized: "HCB credentials reauthorized",
   poster_deleted: "Poster deleted",
+  poster_deletion_reverted: "Poster deletion reverted",
   poster_group_deleted: "Poster group deleted",
   poster_rejected_by_admin: "Poster manually rejected",
   poster_approved_by_admin: "Poster proof approved",
@@ -137,6 +138,11 @@ export function formatAuditEventSummary(event: AuditEventLike): string {
         metadata.posterName ? `It was named ${formatMetadataValue(metadata.posterName)}.` : null,
         metadata.posterGroupName ? `It belonged to ${formatMetadataValue(metadata.posterGroupName)}.` : null,
       );
+    case "poster_deletion_reverted":
+      return joinSentenceParts(
+        `Restored deleted poster ${formatMetadataValue(metadata.referralCode ?? metadata.posterId)}.`,
+        metadata.posterName ? `It was named ${formatMetadataValue(metadata.posterName)}.` : null,
+      );
     case "poster_group_deleted":
       return joinSentenceParts(
         `Deleted poster group ${formatMetadataValue(metadata.posterGroupName ?? metadata.posterGroupId)}.`,
@@ -224,7 +230,7 @@ export function getAuditEventDetailRows(metadata: unknown): DetailRow[] {
     }));
 }
 
-function getMetadataRecord(metadata: unknown): Record<string, unknown> | null {
+export function getMetadataRecord(metadata: unknown): Record<string, unknown> | null {
   if (typeof metadata === "string") {
     const trimmedMetadata = metadata.trim();
 

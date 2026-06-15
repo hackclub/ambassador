@@ -258,8 +258,9 @@ export async function createPostersForGroup(input: {
 export async function deletePosterById(posterId: string) {
   await sql`
     WITH deleted AS (
-      DELETE FROM posters
-      WHERE id = ${posterId}
+      UPDATE posters
+      SET deleted_at = NOW(), updated_at = NOW()
+      WHERE id = ${posterId} AND deleted_at IS NULL
       RETURNING poster_group_id
     )
     UPDATE poster_groups
@@ -272,11 +273,95 @@ export async function deletePosterById(posterId: string) {
   `;
 }
 
+export async function restoreDeletedPoster(posterId: string) {
+  return sql.begin(async (tx) => {
+    const [poster] = await tx<PosterRow[]>`
+      UPDATE posters
+      SET deleted_at = NULL, updated_at = NOW()
+      WHERE id = ${posterId} AND deleted_at IS NOT NULL
+      RETURNING *
+    `;
+    if (!poster) {
+      return null;
+    }
+    if (poster.poster_group_id !== null) {
+      await tx`
+        UPDATE poster_groups
+        SET poster_count = poster_count + 1, updated_at = NOW()
+        WHERE id = ${poster.poster_group_id}
+      `;
+    }
+    return poster;
+  });
+}
+
+// Rebuilds a hard-deleted poster from audit metadata; proof/location/geo aren't recoverable.
+export async function recreateDeletedPoster(input: {
+  id: string;
+  userId: string;
+  campaignSlug: string;
+  referralCode: string;
+  posterType: string;
+  verificationStatus: string;
+  name: string | null;
+  posterGroupId: string | null;
+}): Promise<
+  | { status: "recreated"; poster: PosterRow }
+  | { status: "exists" }
+  | { status: "code_taken" }
+  | { status: "user_missing" }
+> {
+  const qrCodeToken = await generateUniqueQrToken();
+  return sql.begin(async (tx) => {
+    const [existing] = await tx`SELECT 1 FROM posters WHERE id = ${input.id} LIMIT 1`;
+    if (existing) return { status: "exists" };
+
+    const [codeOwner] = await tx`
+      SELECT 1 FROM posters WHERE LOWER(referral_code) = LOWER(${input.referralCode}) LIMIT 1
+    `;
+    if (codeOwner) return { status: "code_taken" };
+
+    const [owner] = await tx`SELECT 1 FROM users WHERE id = ${input.userId} LIMIT 1`;
+    if (!owner) return { status: "user_missing" };
+
+    let groupId: string | null = null;
+    if (input.posterGroupId !== null) {
+      const [group] = await tx<{ id: string }[]>`
+        SELECT id FROM poster_groups WHERE id = ${input.posterGroupId} AND user_id = ${input.userId} LIMIT 1
+      `;
+      groupId = group ? group.id : null;
+    }
+
+    const [poster] = await tx<PosterRow[]>`
+      INSERT INTO posters (
+        id, user_id, poster_group_id, campaign_slug, name,
+        qr_code_token, referral_code, poster_type, verification_status, metadata
+      )
+      VALUES (
+        ${input.id}, ${input.userId}, ${groupId}, ${input.campaignSlug}, ${input.name},
+        ${qrCodeToken}, ${input.referralCode}, ${input.posterType}, ${input.verificationStatus}, '{}'::jsonb
+      )
+      RETURNING *
+    `;
+
+    if (groupId !== null) {
+      await tx`
+        UPDATE poster_groups
+        SET poster_count = poster_count + 1, updated_at = NOW()
+        WHERE id = ${groupId}
+      `;
+    }
+
+    return { status: "recreated", poster };
+  });
+}
+
 export async function deletePosterGroupById(groupId: string) {
   await sql.begin(async (tx) => {
     await tx`
-      DELETE FROM posters
-      WHERE poster_group_id = ${groupId}
+      UPDATE posters
+      SET deleted_at = NOW(), updated_at = NOW()
+      WHERE poster_group_id = ${groupId} AND deleted_at IS NULL
     `;
     await tx`
       DELETE FROM poster_groups
@@ -310,6 +395,7 @@ export async function listUserPostersWithReferralCounts(userId: string) {
       )
     LEFT JOIN stardance_referrals r ON r.referral_code_id = c.id
     WHERE p.user_id = ${userId}
+      AND p.deleted_at IS NULL
     GROUP BY p.id
     ORDER BY p.created_at DESC, p.id DESC
   `;
@@ -341,6 +427,7 @@ export async function countStardanceReferralsForPosterIds(userId: string, poster
     LEFT JOIN stardance_referrals r ON r.referral_code_id = c.id
     WHERE p.user_id = ${userId}
       AND p.id = ANY(${posterIds})
+      AND p.deleted_at IS NULL
     GROUP BY p.id
   `;
 
@@ -374,7 +461,7 @@ export async function countUserPosters(userId: string) {
   const row = (await sql<{ count: string }[]>`
     SELECT COUNT(*)::text AS count
     FROM posters
-    WHERE user_id = ${userId}
+    WHERE user_id = ${userId} AND deleted_at IS NULL
   `).at(0);
 
   return Number.parseInt(row?.count ?? "0", 10);
@@ -383,7 +470,7 @@ export async function countUserPosters(userId: string) {
 export async function countUserPosterUsage(userId: string) {
   const row = (await sql<{ poster_count: string; group_count: string }[]>`
     SELECT
-      (SELECT COUNT(*)::text FROM posters WHERE user_id = ${userId}) AS poster_count,
+      (SELECT COUNT(*)::text FROM posters WHERE user_id = ${userId} AND deleted_at IS NULL) AS poster_count,
       (SELECT COUNT(*)::text FROM poster_groups WHERE user_id = ${userId}) AS group_count
   `).at(0);
 
@@ -397,7 +484,7 @@ export async function findPosterForUser(userId: string, posterId: string) {
   const poster = (await sql<PosterRow[]>`
     SELECT *
     FROM posters
-    WHERE id = ${posterId} AND user_id = ${userId}
+    WHERE id = ${posterId} AND user_id = ${userId} AND deleted_at IS NULL
     LIMIT 1
   `).at(0);
 
@@ -431,7 +518,7 @@ async function findPosterByReferralCode(referralCode: string) {
   const poster = (await sql<PosterRow[]>`
     SELECT *
     FROM posters
-    WHERE LOWER(referral_code) = LOWER(${normalizedCode})
+    WHERE LOWER(referral_code) = LOWER(${normalizedCode}) AND deleted_at IS NULL
     LIMIT 1
   `).at(0);
 
@@ -445,7 +532,7 @@ export async function findPosterByPublicScanCode(scanCode: string) {
     const poster = (await sql<PosterRow[]>`
       SELECT *
       FROM posters
-      WHERE qr_code_token = ${trimmed.toLowerCase()}
+      WHERE qr_code_token = ${trimmed.toLowerCase()} AND deleted_at IS NULL
       LIMIT 1
     `).at(0);
 
@@ -463,7 +550,7 @@ export async function getGroupPosters(groupId: string) {
   return sql<PosterRow[]>`
     SELECT *
     FROM posters
-    WHERE poster_group_id = ${groupId}
+    WHERE poster_group_id = ${groupId} AND deleted_at IS NULL
     ORDER BY created_at ASC, id ASC
   `;
 }
@@ -473,6 +560,7 @@ export async function getUserPendingPosters(userId: string, campaignSlug?: strin
     SELECT *
     FROM posters
     WHERE user_id = ${userId}
+      AND deleted_at IS NULL
       AND verification_status = 'pending'
       ${campaignSlug !== undefined && campaignSlug !== "" ? sql`AND campaign_slug = ${campaignSlug}` : sql``}
       ${excludeId !== undefined && excludeId !== "" ? sql`AND id != ${excludeId}` : sql``}
@@ -526,9 +614,6 @@ export async function updatePosterProofAndVerification(input: {
   return poster;
 }
 
-// Records the country (and US-style state) a poster's coordinates fall in, so
-// the density map can group it by where it physically is. Best-effort: the
-// caller swallows geocoder failures and the backfill script retries them.
 export async function updatePosterGeo(
   posterId: string,
   geo: { country_code: string | null; country_name: string | null; state: string | null },
@@ -614,6 +699,39 @@ export async function movePosterToGroup(
     }
 
     return poster ?? null;
+  });
+}
+
+export async function moveGroupPosters(sourceGroupId: string, targetGroupId: string | null) {
+  return sql.begin(async (tx) => {
+    const [{ count }] = await tx<{ count: string }[]>`
+      SELECT COUNT(*)::text AS count
+      FROM posters
+      WHERE poster_group_id = ${sourceGroupId} AND deleted_at IS NULL
+    `;
+    const moved = Number.parseInt(count ?? "0", 10);
+
+    if (moved > 0) {
+      await tx`
+        UPDATE posters
+        SET poster_group_id = ${targetGroupId}, updated_at = NOW()
+        WHERE poster_group_id = ${sourceGroupId} AND deleted_at IS NULL
+      `;
+      if (targetGroupId !== null) {
+        await tx`
+          UPDATE poster_groups
+          SET poster_count = poster_count + ${moved}, updated_at = NOW()
+          WHERE id = ${targetGroupId}
+        `;
+      }
+    }
+
+    await tx`
+      DELETE FROM poster_groups
+      WHERE id = ${sourceGroupId}
+    `;
+
+    return moved;
   });
 }
 

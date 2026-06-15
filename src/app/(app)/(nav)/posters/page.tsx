@@ -3,11 +3,12 @@ import { forbidden, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { PosterDensityMap } from "@/components/admin/poster-density-map";
+import { PosterPlacementMap } from "@/components/admin/poster-placement-map";
 import { getTranslatedPageMetadata } from "@/i18n/metadata";
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { canAccessPosters, getPosterAccessState } from "@/lib/posters/access";
 import { listPosterCampaigns } from "@/lib/posters/config";
-import { loadPosterMapPoints } from "@/lib/posters/map-points";
+import { loadOwnPosterPlacements, loadPosterMapPoints } from "@/lib/posters/map-points";
 import { getDefaultPaperSize, normalizeRegionCode } from "@/lib/posters/paper-size";
 import { listClientPosterDataForUser } from "@/lib/posters/service";
 import { getEffectiveSafeguards } from "@/lib/safeguards";
@@ -40,9 +41,10 @@ export default async function PostersPage() {
     forbidden();
   }
 
-  const [data, posterMapPoints] = await Promise.all([
+  const [data, posterMapPoints, ownPlacements] = await Promise.all([
     listClientPosterDataForUser(session.sub),
-    loadPosterMapPoints({ viewerId: session.sub }),
+    loadPosterMapPoints(),
+    loadOwnPosterPlacements(session.sub),
   ]);
 
   const campaigns = listPosterCampaigns();
@@ -84,6 +86,21 @@ export default async function PostersPage() {
           initialData={data}
           defaultPaperSize={getDefaultPaperSize(user.country_code, user.ambassador_region)}
           defaultRegionCode={normalizeRegionCode(user.country_code)}
+          ownPosterMap={
+            ownPlacements.length > 0 ? (
+              <section key="own-poster-map">
+                <h2 className="font-sub text-2xl font-bold leading-8 text-foreground">
+                  {t("posters.your-locations.title")}
+                </h2>
+                <p className="mt-1 font-body text-sm text-muted-foreground">
+                  {t("posters.your-locations.description")}
+                </p>
+                <div className="mt-4">
+                  <PosterPlacementMap posters={ownPlacements} />
+                </div>
+              </section>
+            ) : null
+          }
           densityMap={
             <PosterDensityMap
               key="poster-density-map"
@@ -91,9 +108,7 @@ export default async function PostersPage() {
               scope="all"
               interaction="zoom"
               myCountry={
-                // Prefer the declared HCA address country over the IP-geolocated
-                // country_code: the latter is often wrong (a US-routed IP would
-                // send a UK ambassador's "My region" to the States).
+                // Prefer the declared HCA country; IP-geolocated country_code is often wrong.
                 ((user.hca_country ?? user.country_code) ?? "").trim().toUpperCase() || undefined
               }
               locale={locale}
