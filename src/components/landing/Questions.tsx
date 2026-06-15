@@ -4,16 +4,17 @@ const questions = [
     answers: (
       <>
         <p>
-          Help spread the word about Hack Club in your country! 
+          Help spread the word about Hack Club Stardance! 
         </p>
         <ul className="space-y-2 pl-6 list-disc">
           <li>
-            Put up posters around your city advertising The Stardance Challenge.
+            Put up Stardance Challenge posters.
           </li>
           <li>
-            Share your referral links with likeminded teens in your city.
+            Share your referral links with likeminded teens.
           </li>
         </ul>
+        <p>You can also run Stardance Expeditions (meetups) in your city!</p>
       </>
     ),
   },
@@ -56,8 +57,7 @@ const questions = [
           boards.
         </p>
         <p>
-          We&rsquo;re planning to add referral links too, but for now it&rsquo;s
-          posters only.
+          You can also share your referral links with likeminded teens. The more people who sign up with your referral link, the more you earn!.
         </p>
       </>
     ),
@@ -81,21 +81,21 @@ const questions = [
     ),
   },
   {
-    question: "Do I need to run a meetup to be an ambassador?",
+    question: "Do I need to run a Stardance Expedition to be an ambassador?",
     answers: (
       <>
         <p>
-          We highly recommend you run meetups, but it is not a hard requirement. If you do not run the meetups you will not be eligible for the $100 honorarium.
+          We highly recommend you run Stardance Expeditions, but it is not a hard requirement. If you do not run the Stardance Expeditions you will not be eligible for the $100 honorarium.
         </p>
       </>
     )
   },
   {
-    question: "What does a meetup look like?",
+    question: "What does a Stardance Expedition look like?",
     answers: (
       <>
         <p>
-          A meetup isn&apos;t anything big like a Campfire or a Daydream.
+          A Stardance Expedition isn&apos;t anything big like a Campfire or a Daydream.
           It&apos;s just you and some Hack Clubbers from your city hanging
           out and making projects! This is not a formal event.
         </p>
