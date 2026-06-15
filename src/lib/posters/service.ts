@@ -568,14 +568,26 @@ export async function getBulkPosterZipForUser(userId: string) {
   };
 }
 
-export async function getUnverifiedPosterPdfForUser(userId: string) {
+async function listUnverifiedPostersForUser(userId: string) {
   const { groups, standalonePosters } = await listPosterDataForUser(userId);
-  const posters = [
+  return [
     ...standalonePosters,
     ...groups.flatMap((g) => g.posters),
   ].filter((poster) => poster.verification_status !== "success");
+}
+
+export async function getUnverifiedPosterPdfForUser(userId: string) {
+  const posters = await listUnverifiedPostersForUser(userId);
   return {
     pdf: await generateMergedPosterGroupPdf(posters),
+    count: posters.length,
+  };
+}
+
+export async function getUnverifiedPosterZipForUser(userId: string) {
+  const posters = await listUnverifiedPostersForUser(userId);
+  return {
+    zip: await generatePosterZip(posters),
     count: posters.length,
   };
 }

@@ -649,6 +649,10 @@ export function PostersClient({
                         label: t("actions.download-unverified"),
                         href: "/api/posters/bulk?scope=unverified&format=pdf",
                       },
+                      {
+                        label: t("actions.download-unverified-zip"),
+                        href: "/api/posters/bulk?scope=unverified&format=zip",
+                      },
                     ]
                   : []),
               ]}
@@ -856,13 +860,6 @@ function GroupCard({
         </div>
         {!editingName && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <DownloadMenu
-            label={t("actions.download")}
-            items={[
-              { label: t("actions.download-pdf"), href: `/api/poster-groups/${group.id}/pdf` },
-              { label: t("actions.download-zip"), href: `/api/poster-groups/${group.id}/zip` },
-            ]}
-          />
           <button
             type="button"
             data-slot="icon-link"

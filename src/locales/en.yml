@@ -192,11 +192,10 @@ posters:
     create-poster: New poster
     create-group: New group
     download: Download
-    download-pdf: PDF
-    download-zip: ZIP
     download-all-pdf: All posters (PDF)
     download-all-zip: All posters (ZIP)
     download-unverified: Unverified only (PDF)
+    download-unverified-zip: Unverified only (ZIP)
     verify: Verify in the wild
     verify-group: Verify group
     cancel: Cancel
