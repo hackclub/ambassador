@@ -930,7 +930,7 @@ export default async function AdminUserDetailPage({
               }
 
               const query = search.toString();
-              return `${query ? `?${query}` : ""}#internal-notes`;
+              return `?${query}#internal-notes`;
             }}
           />
         </DetailSection>
@@ -1139,7 +1139,7 @@ export default async function AdminUserDetailPage({
             }
 
             const query = search.toString();
-            return query ? `?${query}` : "";
+            return `?${query}`;
           }}
         />
       </DetailSection>
@@ -1325,7 +1325,7 @@ export default async function AdminUserDetailPage({
               if (currentReferralPage > 1) search.set("referralsPage", String(currentReferralPage));
               if (page > 1) search.set("postersPage", String(page));
               const queryString = search.toString();
-              return `${queryString ? `?${queryString}` : ""}#posters`;
+              return `?${queryString}#posters`;
             }}
           />
         </DetailSection>
@@ -1490,7 +1490,7 @@ export default async function AdminUserDetailPage({
               if (currentPosterPage > 1) search.set("postersPage", String(currentPosterPage));
               if (page > 1) search.set("referralsPage", String(page));
               const queryString = search.toString();
-              return `${queryString ? `?${queryString}` : ""}#referrals`;
+              return `?${queryString}#referrals`;
             }}
           />
         </DetailSection>
