@@ -8,7 +8,7 @@ import { getTranslatedPageMetadata } from "@/i18n/metadata";
 import { ensureSchema } from "@/lib/database/ensure-schema";
 import { canAccessPosters, getPosterAccessState } from "@/lib/posters/access";
 import { listPosterCampaigns } from "@/lib/posters/config";
-import { loadOwnPosterPlacements, loadPosterMapPoints } from "@/lib/posters/map-points";
+import { loadPosterPlacementsForUser, loadPosterMapPoints } from "@/lib/posters/map-points";
 import { getDefaultPaperSize, normalizeRegionCode } from "@/lib/posters/paper-size";
 import { listClientPosterDataForUser } from "@/lib/posters/service";
 import { getEffectiveSafeguards } from "@/lib/safeguards";
@@ -44,7 +44,7 @@ export default async function PostersPage() {
   const [data, posterMapPoints, ownPlacements] = await Promise.all([
     listClientPosterDataForUser(session.sub),
     loadPosterMapPoints(),
-    loadOwnPosterPlacements(session.sub),
+    loadPosterPlacementsForUser(session.sub),
   ]);
 
   const campaigns = listPosterCampaigns();

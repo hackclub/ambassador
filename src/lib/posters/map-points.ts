@@ -72,7 +72,7 @@ type OwnPlacementRow = {
   geo_country_name: string | null;
 };
 
-export async function loadOwnPosterPlacements(userId: string): Promise<MapPoster[]> {
+export async function loadPosterPlacementsForUser(userId: string): Promise<MapPoster[]> {
   const rows = await sql<OwnPlacementRow[]>`
     SELECT
       p.id,

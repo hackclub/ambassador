@@ -17,10 +17,17 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_account_number: "That account number doesn't look right.",
   invalid_routing_number: "Routing numbers must be 9 digits.",
   invalid_banking_institution_name: "Enter your bank's name.",
+  ach_not_available_for_region: "ACH is only for US ambassadors. Use Wise instead.",
   payouts_disabled: "Payouts aren't available right now.",
 };
 
-export function RequestPayoutForm({ amountLabel }: { amountLabel: string }) {
+export function RequestPayoutForm({
+  amountLabel,
+  allowAch = false,
+}: {
+  amountLabel: string;
+  allowAch?: boolean;
+}) {
   const router = useRouter();
   const [method, setMethod] = useState<PayoutMethod>("wise");
   const [submitting, setSubmitting] = useState(false);
@@ -64,7 +71,7 @@ export function RequestPayoutForm({ amountLabel }: { amountLabel: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PayoutMethodPicker value={method} onChange={setMethod} />
+      <PayoutMethodPicker value={method} onChange={setMethod} allowAch={allowAch} />
 
       <label className="block font-body text-sm text-secondary">
         Banking institution name

@@ -486,7 +486,6 @@ export function PostersClient({
   ];
   const pendingPosters = allPosters.filter((p) => p.verification_status === "pending");
   const verifiedCount = allPosters.filter((p) => p.verification_status === "success").length;
-  const unverifiedCount = allPosters.filter((p) => p.verification_status !== "success").length;
   const totalPosters = allPosters.length;
 
   const [draggingPosterId, setDraggingPosterId] = useState<string | null>(null);
@@ -638,25 +637,6 @@ export function PostersClient({
                 aria-hidden
               />
             </button>
-            <DownloadMenu
-              label={t("actions.download")}
-              items={[
-                { label: t("actions.download-all-pdf"), href: "/api/posters/bulk?format=pdf" },
-                { label: t("actions.download-all-zip"), href: "/api/posters/bulk?format=zip" },
-                ...(unverifiedCount > 0
-                  ? [
-                      {
-                        label: t("actions.download-unverified"),
-                        href: "/api/posters/bulk?scope=unverified&format=pdf",
-                      },
-                      {
-                        label: t("actions.download-unverified-zip"),
-                        href: "/api/posters/bulk?scope=unverified&format=zip",
-                      },
-                    ]
-                  : []),
-              ]}
-            />
           </div>
           {showGroups && (
             <div className="mt-4 space-y-4">
@@ -860,6 +840,15 @@ function GroupCard({
         </div>
         {!editingName && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <DownloadMenu
+            label={t("actions.download")}
+            items={[
+              { label: t("actions.download-all-pdf"), href: `/api/poster-groups/${group.id}/pdf` },
+              { label: t("actions.download-all-zip"), href: `/api/poster-groups/${group.id}/zip` },
+              { label: t("actions.download-unverified-pdf"), href: `/api/poster-groups/${group.id}/pdf?scope=unverified` },
+              { label: t("actions.download-unverified-zip"), href: `/api/poster-groups/${group.id}/zip?scope=unverified` },
+            ]}
+          />
           <button
             type="button"
             data-slot="icon-link"
@@ -1351,7 +1340,7 @@ function PosterTreeItem({
               aria-label={`Download poster ${displayCode}`}
               title={`Download poster ${displayCode}`}
             >
-              <Icon glyph="download" size={17} />
+              <Icon glyph="download" size={20} />
             </a>
             <button
               type="button"

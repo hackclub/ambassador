@@ -3,6 +3,7 @@
 import Icon from "@hackclub/icons";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export type PayoutMethod = "wise" | "ach";
 
@@ -12,19 +13,23 @@ const METHODS = [
 ] as const;
 
 // Same selection language as the dashboard shirt-size picker: square filled
-// tiles, and the chosen one turns black and gets a checkmark.
+// tiles, and the chosen one turns black and gets a checkmark. ACH is a US bank
+// rail, so allowAch hides it for ambassadors who can't use it.
 export function PayoutMethodPicker({
   value,
   onChange,
+  allowAch = true,
 }: {
   value: PayoutMethod;
   onChange: (method: PayoutMethod) => void;
+  allowAch?: boolean;
 }) {
+  const methods = allowAch ? METHODS : METHODS.filter((method) => method.value !== "ach");
   return (
     <div role="group" aria-label="Transfer method">
       <span className="block font-body text-sm text-secondary">Transfer method</span>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        {METHODS.map((method) => {
+      <div className={cn("mt-2 grid gap-2", methods.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
+        {methods.map((method) => {
           const active = method.value === value;
           return (
             <Button

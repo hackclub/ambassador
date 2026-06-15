@@ -508,12 +508,19 @@ export async function getPosterPdfForUser(userId: string, posterId: string) {
   };
 }
 
-export async function getPosterGroupPdfForUser(userId: string, groupId: string) {
+export async function getPosterGroupPdfForUser(
+  userId: string,
+  groupId: string,
+  { unverifiedOnly = false }: { unverifiedOnly?: boolean } = {},
+) {
   const { group, posters } = await getPosterGroupForUserOrThrow(userId, groupId);
+  const selected = unverifiedOnly
+    ? posters.filter((poster) => poster.verification_status !== "success")
+    : posters;
   return {
     group,
-    posters,
-    pdf: await generateMergedPosterGroupPdf(posters),
+    posters: selected,
+    pdf: await generateMergedPosterGroupPdf(selected),
   };
 }
 
@@ -535,12 +542,19 @@ async function generatePosterZip(posters: PosterRow[]) {
   return zip.generateAsync({ type: "arraybuffer" });
 }
 
-export async function getPosterGroupZipForUser(userId: string, groupId: string) {
+export async function getPosterGroupZipForUser(
+  userId: string,
+  groupId: string,
+  { unverifiedOnly = false }: { unverifiedOnly?: boolean } = {},
+) {
   const { group, posters } = await getPosterGroupForUserOrThrow(userId, groupId);
+  const selected = unverifiedOnly
+    ? posters.filter((poster) => poster.verification_status !== "success")
+    : posters;
   return {
     group,
-    posters,
-    zip: await generatePosterZip(posters),
+    posters: selected,
+    zip: await generatePosterZip(selected),
   };
 }
 

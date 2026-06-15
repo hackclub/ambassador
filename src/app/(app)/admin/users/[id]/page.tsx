@@ -9,6 +9,7 @@ import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
 import { DetailDateRow, DetailFieldRow, DetailPager, DetailRow, DetailSection } from "@/components/admin/detail";
 import { ExpandableImage } from "@/components/admin/expandable-image";
 import { HackatimeTrustStatus } from "@/components/admin/hackatime-trust-status";
+import { PosterPlacementMap } from "@/components/admin/poster-placement-map";
 import { SlackAvatar, SlackProfile } from "@/components/admin/slack-profile";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { SuperuserPasswordForm } from "@/components/admin/superuser-password-form";
@@ -35,6 +36,7 @@ import {
 } from "@/lib/hcb/grants";
 import { getCachedHackatimeTrustLevel } from "@/lib/hackatime";
 import { formatPosterLabel } from "@/lib/posters/format";
+import { loadPosterPlacementsForUser } from "@/lib/posters/map-points";
 import { getPosterProofUrl } from "@/lib/posters/storage";
 import { readHcaAccessToken } from "@/lib/hca-access-token";
 import { ensureUserAddressSchema } from "@/lib/database/user-address-schema";
@@ -259,6 +261,7 @@ export default async function AdminUserDetailPage({
     posterList,
     referralCounts,
     referralList,
+    posterPlacements,
   ] = await Promise.all([
     sql<ApplicationListRow[]>`
       SELECT id, status, name, date_of_birth, decision_note, created_at, updated_at
@@ -368,6 +371,7 @@ export default async function AdminUserDetailPage({
       LIMIT ${REFERRALS_PER_PAGE}
       OFFSET ${(referralsPage - 1) * REFERRALS_PER_PAGE}
     `,
+    loadPosterPlacementsForUser(user.id),
   ]);
   const currentUserNote =
     typeof latestNoteEvent?.note === "string" && latestNoteEvent.note.trim().length > 0
@@ -1182,6 +1186,20 @@ export default async function AdminUserDetailPage({
               })}
             </p>
           </div>
+
+          {posterPlacements.length > 0 ? (
+            <div className="space-y-1">
+              <h3 className="font-body text-base font-medium text-foreground">
+                {t("admin.user-detail.posters.where.title")}
+              </h3>
+              <p className="font-body text-sm text-muted-foreground">
+                {t("admin.user-detail.posters.where.description")}
+              </p>
+              <div className="pt-2">
+                <PosterPlacementMap posters={posterPlacements} />
+              </div>
+            </div>
+          ) : null}
 
           {posterList.length > 0 ? (
             <div className="overflow-x-auto">

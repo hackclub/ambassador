@@ -192,9 +192,9 @@ posters:
     create-poster: New poster
     create-group: New group
     download: Download
-    download-all-pdf: All posters (PDF)
-    download-all-zip: All posters (ZIP)
-    download-unverified: Unverified only (PDF)
+    download-all-pdf: All (PDF)
+    download-all-zip: All (ZIP)
+    download-unverified-pdf: Unverified only (PDF)
     download-unverified-zip: Unverified only (ZIP)
     verify: Verify in the wild
     verify-group: Verify group
@@ -1161,6 +1161,9 @@ admin:
       empty: No posters on file.
       total: "{count} total"
       breakdown: "{pending} pending • {inReview} in review • {success} verified • {rejected} rejected • {digital} digital"
+      where:
+        title: Where the posters are
+        description: Tap a poster to zoom to it, or open it in Google Maps.
       columns:
         created: Created
         proof: Proof

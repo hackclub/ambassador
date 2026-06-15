@@ -409,8 +409,9 @@ export async function createPayoutForUser(input: {
   await ensureSchema();
 
   return sql.begin(async (transaction) => {
-    const user = (await transaction<{ balance_cents: number; has_pending_payout: boolean }[]>`
+    const user = (await transaction<{ balance_cents: number; has_pending_payout: boolean; ambassador_region: string | null }[]>`
       SELECT COALESCE(u.balance_cents, 0) AS balance_cents,
+             u.ambassador_region,
              EXISTS (
                SELECT 1
                FROM payouts
@@ -426,6 +427,15 @@ export async function createPayoutForUser(input: {
 
     if (!user) {
       throw new PayoutRequestError("not_found", 404);
+    }
+
+    // ACH is a US bank rail, so only US ambassadors may pick it; everyone else
+    // pays out through Wise.
+    if (
+      input.bankInfo.bankTransferMethod === PAYOUT_METHOD_ACH &&
+      user.ambassador_region !== "United States"
+    ) {
+      throw new PayoutRequestError("ach_not_available_for_region", 400);
     }
 
     const balanceCents = user.balance_cents;

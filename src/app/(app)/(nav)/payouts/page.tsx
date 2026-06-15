@@ -128,7 +128,10 @@ export default async function PayoutsPage({
                 <p className="mb-4 font-body text-base text-muted-foreground">
                   This pays out your full balance of {formatUsdCents(balance.balanceCents)}.
                 </p>
-                <RequestPayoutForm amountLabel={formatUsdCents(balance.balanceCents)} />
+                <RequestPayoutForm
+                  amountLabel={formatUsdCents(balance.balanceCents)}
+                  allowAch={user.ambassador_region === "United States"}
+                />
               </>
             )}
           </div>
