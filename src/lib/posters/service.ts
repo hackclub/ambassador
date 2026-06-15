@@ -558,54 +558,6 @@ export async function getPosterGroupZipForUser(
   };
 }
 
-export async function getBulkPosterPdfForUser(userId: string) {
-  const { groups, standalonePosters } = await listPosterDataForUser(userId);
-  const allPosters = [
-    ...standalonePosters,
-    ...groups.flatMap((g) => g.posters),
-  ];
-  return {
-    pdf: await generateMergedPosterGroupPdf(allPosters),
-    count: allPosters.length,
-  };
-}
-
-export async function getBulkPosterZipForUser(userId: string) {
-  const { groups, standalonePosters } = await listPosterDataForUser(userId);
-  const allPosters = [
-    ...standalonePosters,
-    ...groups.flatMap((g) => g.posters),
-  ];
-  return {
-    zip: await generatePosterZip(allPosters),
-    count: allPosters.length,
-  };
-}
-
-async function listUnverifiedPostersForUser(userId: string) {
-  const { groups, standalonePosters } = await listPosterDataForUser(userId);
-  return [
-    ...standalonePosters,
-    ...groups.flatMap((g) => g.posters),
-  ].filter((poster) => poster.verification_status !== "success");
-}
-
-export async function getUnverifiedPosterPdfForUser(userId: string) {
-  const posters = await listUnverifiedPostersForUser(userId);
-  return {
-    pdf: await generateMergedPosterGroupPdf(posters),
-    count: posters.length,
-  };
-}
-
-export async function getUnverifiedPosterZipForUser(userId: string) {
-  const posters = await listUnverifiedPostersForUser(userId);
-  return {
-    zip: await generatePosterZip(posters),
-    count: posters.length,
-  };
-}
-
 export function toPublicScanResult(result: ScanMatchResult): PublicScanResult {
   const base = {
     status: result.status,
