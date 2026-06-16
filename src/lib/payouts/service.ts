@@ -52,6 +52,7 @@ type PayoutRow = {
   public_comment: string | null;
   transfer_link: string | null;
   created_by_admin_id: string | null;
+  bundle_frozen_at: string | null;
   submitted_at: string;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -211,16 +212,17 @@ function isManualPayout(row: Pick<PayoutRow, "created_by_admin_id">) {
 }
 
 /**
- * The amount shown for a payout. A pending *requested* payout pays out the
- * ambassador's entire current balance, so its live amount tracks the balance;
- * an approved payout is frozen at the amount that was debited; a rejected one
- * keeps the snapshot captured at request time. Manual payouts always carry
- * the fixed amount the admin chose.
+ * The amount shown for a payout. A pending *requested* payout whose bundle was
+ * frozen at request shows that snapshot (`amount_cents`); a legacy pending one
+ * still tracks the live balance. An approved payout is frozen at the amount
+ * that was debited; a rejected one keeps the snapshot captured at request time.
+ * Manual payouts always carry the fixed amount the admin chose.
  */
 function effectiveAmountCents(row: PayoutRow, balanceCents: number) {
-  return row.status === PAYOUT_STATUS_PENDING && !isManualPayout(row)
-    ? balanceCents
-    : row.amount_cents;
+  if (row.status !== PAYOUT_STATUS_PENDING || isManualPayout(row)) {
+    return row.amount_cents;
+  }
+  return row.bundle_frozen_at === null ? balanceCents : row.amount_cents;
 }
 
 function serializePayout(row: PayoutRow, balanceCents: number) {
@@ -278,7 +280,7 @@ const PAYOUT_COLUMNS = sql`
   id, user_id, amount_cents, status, bank_transfer_method,
   banking_institution_name, iban, account_number, routing_number,
   ambassador_notes, admin_comment, public_comment, transfer_link,
-  created_by_admin_id, submitted_at, reviewed_at, reviewed_by, created_at, updated_at
+  created_by_admin_id, bundle_frozen_at, submitted_at, reviewed_at, reviewed_by, created_at, updated_at
 `;
 
 async function getBalanceCents(executor: Executor, userId: string) {
@@ -383,7 +385,7 @@ export async function getPayoutForUser(userId: string, payoutId: string) {
     SELECT p.id, p.user_id, p.amount_cents, p.status, p.bank_transfer_method,
            p.banking_institution_name, p.iban, p.account_number, p.routing_number,
            p.ambassador_notes, p.admin_comment, p.public_comment, p.transfer_link,
-           p.created_by_admin_id, p.submitted_at, p.reviewed_at, p.reviewed_by,
+           p.created_by_admin_id, p.bundle_frozen_at, p.submitted_at, p.reviewed_at, p.reviewed_by,
            p.created_at, p.updated_at,
            COALESCE(u.balance_cents, 0) AS user_balance_cents
     FROM payouts p
@@ -457,13 +459,13 @@ export async function createPayoutForUser(input: {
       INSERT INTO payouts (
         id, user_id, amount_cents, status, bank_transfer_method,
         banking_institution_name, iban, account_number, routing_number,
-        ambassador_notes
+        ambassador_notes, bundle_frozen_at
       )
       VALUES (
         ${id}, ${input.userId}, ${balanceCents}, ${PAYOUT_STATUS_PENDING},
         ${input.bankInfo.bankTransferMethod}, ${input.bankInfo.bankingInstitutionName},
         ${input.bankInfo.iban}, ${input.bankInfo.accountNumber}, ${input.bankInfo.routingNumber},
-        ${input.ambassadorNotes ?? null}
+        ${input.ambassadorNotes ?? null}, NOW()
       )
       RETURNING ${PAYOUT_COLUMNS}
     `.catch((error: unknown) => {
@@ -478,6 +480,10 @@ export async function createPayoutForUser(input: {
     if (!row) {
       throw new PayoutRequestError("create_failed", 500);
     }
+
+    // Snapshot the verified posters/referrals into the payout now, so anything
+    // verified while it sits pending rolls into the *next* payout instead.
+    await freezePayoutLineItems(transaction, row);
 
     return serializePayout(row, balanceCents);
   });
@@ -633,15 +639,25 @@ export async function assertPosterUnlockedForReview(
 ) {
   await ensureSchema();
 
-  const consumed = (await sql<{ payout_id: string }[]>`
-    SELECT payout_id FROM payout_posters WHERE poster_id = ${posterId} LIMIT 1
-  `).at(0);
+  // A frozen payout's bundle is recorded in payout_posters from request time.
+  // A finalized payout's membership locks the poster outright; a still-pending
+  // payout's only lets it be edited from that payout's own review screen.
+  const memberships = await sql<{ payout_id: string; status: PayoutStatus }[]>`
+    SELECT pp.payout_id, pay.status
+    FROM payout_posters pp
+    JOIN payouts pay ON pay.id = pp.payout_id
+    WHERE pp.poster_id = ${posterId}
+  `;
 
-  if (consumed) {
-    throw new PayoutRequestError("poster_locked_in_payout", 409);
+  for (const membership of memberships) {
+    if (membership.status !== PAYOUT_STATUS_PENDING || membership.payout_id !== viaPayoutId) {
+      throw new PayoutRequestError("poster_locked_in_payout", 409);
+    }
   }
 
-  const pendingBundle = (await sql<{ id: string }[]>`
+  // Legacy pending payouts (requested before bundles were frozen) have no
+  // line-item rows, so every verified poster of the user is still tied to them.
+  const legacyBundle = (await sql<{ id: string }[]>`
     SELECT pay.id
     FROM payouts pay
     JOIN posters p ON p.user_id = pay.user_id
@@ -649,10 +665,11 @@ export async function assertPosterUnlockedForReview(
       AND p.verification_status = 'success'
       AND pay.status = ${PAYOUT_STATUS_PENDING}
       AND pay.created_by_admin_id IS NULL
+      AND pay.bundle_frozen_at IS NULL
     LIMIT 1
   `).at(0);
 
-  if (pendingBundle && pendingBundle.id !== viaPayoutId) {
+  if (legacyBundle && legacyBundle.id !== viaPayoutId) {
     throw new PayoutRequestError("poster_locked_in_payout", 409);
   }
 }
@@ -664,15 +681,20 @@ export async function assertReferralUnlockedForReview(
 ) {
   await ensureSchema();
 
-  const consumed = (await sql<{ payout_id: string }[]>`
-    SELECT payout_id FROM payout_referrals WHERE referral_id = ${referralId} LIMIT 1
-  `).at(0);
+  const memberships = await sql<{ payout_id: string; status: PayoutStatus }[]>`
+    SELECT pr.payout_id, pay.status
+    FROM payout_referrals pr
+    JOIN payouts pay ON pay.id = pr.payout_id
+    WHERE pr.referral_id = ${referralId}
+  `;
 
-  if (consumed) {
-    throw new PayoutRequestError("referral_locked_in_payout", 409);
+  for (const membership of memberships) {
+    if (membership.status !== PAYOUT_STATUS_PENDING || membership.payout_id !== viaPayoutId) {
+      throw new PayoutRequestError("referral_locked_in_payout", 409);
+    }
   }
 
-  const pendingBundle = (await sql<{ id: string }[]>`
+  const legacyBundle = (await sql<{ id: string }[]>`
     SELECT pay.id
     FROM payouts pay
     JOIN stardance_referrals r ON r.user_id = pay.user_id
@@ -680,10 +702,11 @@ export async function assertReferralUnlockedForReview(
       AND r.verification_status = 'verified'
       AND pay.status = ${PAYOUT_STATUS_PENDING}
       AND pay.created_by_admin_id IS NULL
+      AND pay.bundle_frozen_at IS NULL
     LIMIT 1
   `).at(0);
 
-  if (pendingBundle && pendingBundle.id !== viaPayoutId) {
+  if (legacyBundle && legacyBundle.id !== viaPayoutId) {
     throw new PayoutRequestError("referral_locked_in_payout", 409);
   }
 }
@@ -693,7 +716,7 @@ function adminPayoutSelect() {
     SELECT p.id, p.user_id, p.amount_cents, p.status, p.bank_transfer_method,
            p.banking_institution_name, p.iban, p.account_number, p.routing_number,
            p.ambassador_notes, p.admin_comment, p.public_comment, p.transfer_link,
-           p.created_by_admin_id, p.submitted_at, p.reviewed_at, p.reviewed_by,
+           p.created_by_admin_id, p.bundle_frozen_at, p.submitted_at, p.reviewed_at, p.reviewed_by,
            p.created_at, p.updated_at,
            u.email AS user_email, u.display_name AS user_display_name,
            COALESCE(u.balance_cents, 0) AS user_balance_cents,
@@ -822,10 +845,13 @@ export async function getPayoutBreakdown(payoutId: string) {
       user_id: string;
       status: PayoutStatus;
       created_by_admin_id: string | null;
+      bundle_frozen_at: string | null;
+      amount_cents: number;
       balance_cents: number;
     }[]
   >`
     SELECT p.id, p.user_id, p.status, p.created_by_admin_id,
+           p.bundle_frozen_at, p.amount_cents,
            COALESCE(u.balance_cents, 0) AS balance_cents
     FROM payouts p
     JOIN users u ON u.id = p.user_id
@@ -852,9 +878,13 @@ export async function getPayoutBreakdown(payoutId: string) {
   }
 
   const isPending = payout.status === PAYOUT_STATUS_PENDING;
+  const frozen = payout.bundle_frozen_at !== null;
+  // Frozen payouts (and every finalized payout) read their snapshotted bundle;
+  // only a legacy pending payout still lists the live verified inventory.
+  const readBundle = frozen || !isPending;
 
   const [posterRows, referralRows, ledgerRows] = await Promise.all([
-    isPending
+    !readBundle
       ? sql<
           {
             id: string;
@@ -907,7 +937,7 @@ export async function getPayoutBreakdown(payoutId: string) {
           WHERE pp.payout_id = ${payoutId}
           ORDER BY p.verified_at DESC NULLS LAST, p.created_at DESC
         `,
-    isPending
+    !readBundle
       ? sql<
           {
             id: string;
@@ -1002,9 +1032,14 @@ export async function getPayoutBreakdown(payoutId: string) {
 
   const posterCounted = posters.filter((p) => p.counts).length * POSTER_PAYOUT_CENTS;
   const referralCounted = referrals.filter((r) => r.counts).length * REFERRAL_PAYOUT_CENTS;
-  // The remainder reconciles the itemised value to the live balance: meetup
-  // adjustments, and debt from clawing back already-paid items.
-  const miscCents = payout.balance_cents - posterCounted - referralCounted;
+  // A frozen payout reconciles to its request-time snapshot (amount_cents): the
+  // remainder is meetup adjustments and debt captured then, and the payable
+  // total drops as bundled items are un-verified during review but never grows.
+  // A legacy payout reconciles to the live balance instead.
+  const miscCents = frozen
+    ? payout.amount_cents - posters.length * POSTER_PAYOUT_CENTS - referrals.length * REFERRAL_PAYOUT_CENTS
+    : payout.balance_cents - posterCounted - referralCounted;
+  const balanceCents = frozen ? posterCounted + referralCounted + miscCents : payout.balance_cents;
 
   const ledger: PayoutLedgerEntry[] = ledgerRows.map((row) => ({
     id: row.id,
@@ -1016,7 +1051,7 @@ export async function getPayoutBreakdown(payoutId: string) {
   }));
 
   return {
-    balanceCents: payout.balance_cents,
+    balanceCents,
     posterCountedCents: posterCounted,
     referralCountedCents: referralCounted,
     miscCents,
@@ -1073,6 +1108,51 @@ async function freezePayoutLineItems(
       AND r.id NOT IN (SELECT pr.referral_id FROM payout_referrals pr)
     ON CONFLICT (payout_id, referral_id) DO NOTHING
   `;
+}
+
+/**
+ * Settle a payout whose bundle was frozen at request time: drop the bundled
+ * posters/referrals that have since been un-verified, and return the amount
+ * actually owed (the request snapshot minus those stale line items). The
+ * remaining bundle is exactly what gets paid.
+ */
+async function settleFrozenBundle(
+  executor: Executor,
+  payout: Pick<PayoutRow, "id" | "amount_cents">,
+) {
+  const deducted =
+    (await executor<{ cents: number }[]>`
+      SELECT
+        COALESCE((
+          SELECT SUM(pp.amount_cents)::int
+          FROM payout_posters pp
+          JOIN posters p ON p.id = pp.poster_id
+          WHERE pp.payout_id = ${payout.id} AND p.verification_status <> 'success'
+        ), 0)
+        + COALESCE((
+          SELECT SUM(pr.amount_cents)::int
+          FROM payout_referrals pr
+          JOIN stardance_referrals r ON r.id = pr.referral_id
+          WHERE pr.payout_id = ${payout.id} AND r.verification_status <> 'verified'
+        ), 0) AS cents
+    `).at(0)?.cents ?? 0;
+
+  await executor`
+    DELETE FROM payout_posters pp
+    USING posters p
+    WHERE pp.poster_id = p.id
+      AND pp.payout_id = ${payout.id}
+      AND p.verification_status <> 'success'
+  `;
+  await executor`
+    DELETE FROM payout_referrals pr
+    USING stardance_referrals r
+    WHERE pr.referral_id = r.id
+      AND pr.payout_id = ${payout.id}
+      AND r.verification_status <> 'verified'
+  `;
+
+  return payout.amount_cents - deducted;
 }
 
 export async function reviewPayout(input: {
@@ -1142,6 +1222,8 @@ export async function reviewPayout(input: {
     }
 
     if (status === PAYOUT_STATUS_REJECTED) {
+      const isFrozen = payout.bundle_frozen_at !== null && !isManualPayout(payout);
+
       // "Don't return the money": forfeit the balance and consume the bundled
       // posters/referrals so none of it can be requested again. Only requested
       // payouts have money to forfeit — manual ones never touch the balance.
@@ -1161,10 +1243,19 @@ export async function reviewPayout(input: {
           throw new PayoutRequestError("not_found", 404);
         }
 
-        await freezePayoutLineItems(transaction, payout);
+        // A frozen payout forfeits only its snapshot (bundled items still
+        // verified); a legacy one freezes whatever is verified now and forfeits
+        // the entire live balance.
+        let owedCents: number;
+        if (isFrozen) {
+          owedCents = await settleFrozenBundle(transaction, payout);
+        } else {
+          await freezePayoutLineItems(transaction, payout);
+          owedCents = user.balance_cents;
+        }
 
-        if (user.balance_cents > 0) {
-          forfeitedCents = user.balance_cents;
+        if (owedCents > 0) {
+          forfeitedCents = owedCents;
           await transaction`
             INSERT INTO payout_balance_events (id, user_id, payout_id, amount_cents, reason, note, public_note, created_by)
             VALUES (
@@ -1174,6 +1265,11 @@ export async function reviewPayout(input: {
             )
           `;
         }
+      } else if (isFrozen) {
+        // Reverse-reject: release the frozen bundle so its posters/referrals
+        // roll into the ambassador's next payout. The balance is left intact.
+        await transaction`DELETE FROM payout_posters WHERE payout_id = ${payout.id}`;
+        await transaction`DELETE FROM payout_referrals WHERE payout_id = ${payout.id}`;
       }
 
       const row = (await transaction<PayoutWithBalanceRow[]>`
@@ -1231,32 +1327,40 @@ export async function reviewPayout(input: {
       return serializePayout(row, row.user_balance_cents);
     }
 
-    // Approval of a requested payout: pay out the full current balance.
-    const user = (await transaction<{ balance_cents: number }[]>`
-      SELECT COALESCE(balance_cents, 0) AS balance_cents
-      FROM users
-      WHERE id = ${payout.user_id}
-      LIMIT 1
-      FOR UPDATE
-    `).at(0);
+    // Approval of a requested payout. A frozen payout pays its request-time
+    // snapshot (minus any bundled item un-verified during review), leaving
+    // anything verified since for the next payout; a legacy one pays out the
+    // full live balance and snapshots its line items now.
+    let payoutCents: number;
 
-    if (!user) {
-      throw new PayoutRequestError("not_found", 404);
+    if (payout.bundle_frozen_at !== null) {
+      payoutCents = await settleFrozenBundle(transaction, payout);
+    } else {
+      const user = (await transaction<{ balance_cents: number }[]>`
+        SELECT COALESCE(balance_cents, 0) AS balance_cents
+        FROM users
+        WHERE id = ${payout.user_id}
+        LIMIT 1
+        FOR UPDATE
+      `).at(0);
+
+      if (!user) {
+        throw new PayoutRequestError("not_found", 404);
+      }
+
+      payoutCents = user.balance_cents;
+      await freezePayoutLineItems(transaction, payout);
     }
 
-    const balanceCents = user.balance_cents;
-
-    if (balanceCents <= 0) {
+    if (payoutCents <= 0) {
       throw new PayoutRequestError("nothing_to_pay_out", 409);
     }
 
-    await freezePayoutLineItems(transaction, payout);
-
-    // Debit the ledger. The BEFORE INSERT trigger zeroes balance_cents.
+    // Debit the ledger. The BEFORE INSERT trigger applies it to balance_cents.
     const debit = (await transaction<{ balance_after_cents: number }[]>`
       INSERT INTO payout_balance_events (id, user_id, payout_id, amount_cents, reason, note, public_note, created_by)
       VALUES (
-        ${crypto.randomUUID()}, ${payout.user_id}, ${payout.id}, ${-balanceCents},
+        ${crypto.randomUUID()}, ${payout.user_id}, ${payout.id}, ${-payoutCents},
         ${"payout_approved"}, ${input.adminComment ?? null}, ${input.publicComment ?? null},
         ${input.adminUserId}
       )
@@ -1270,7 +1374,7 @@ export async function reviewPayout(input: {
     const row = (await transaction<PayoutRow[]>`
       UPDATE payouts
       SET status = ${PAYOUT_STATUS_APPROVED},
-          amount_cents = ${balanceCents},
+          amount_cents = ${payoutCents},
           transfer_link = ${transferLink},
           admin_comment = ${input.adminComment ?? payout.admin_comment},
           public_comment = ${input.publicComment ?? payout.public_comment},
