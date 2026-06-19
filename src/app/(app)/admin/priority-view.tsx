@@ -55,6 +55,12 @@ export async function PriorityView({
     day: "numeric",
   });
 
+  // The leaderboard slice the chart caches under its initial scope must match
+  // the scope the page actually renders, or "all regions" shows the US list.
+  const scope: Scope = lockScopeAll ? "all" : (initialScope ?? "us");
+  const seedRegion =
+    scope === "us" ? "United States" : scope === "other" ? "non-us" : "all";
+
   const [
     ambassadorRows,
     signupsRows,
@@ -233,8 +239,8 @@ export async function PriorityView({
         LEFT JOIN referral_totals rt ON rt.day = days.day
         ORDER BY days.day ASC
       `,
-      // The priority leaderboard defaults to United States, so seed that slice.
-      loadTopAmbassadors("all", "United States"),
+      // Seed the leaderboard slice that matches the page's initial scope.
+      loadTopAmbassadors("all", seedRegion),
       // Every verified poster with coordinates, with the placer attached so the
       // admin map's dots can say who put each one up.
       loadPosterMapPoints({ includePlacer: true }),
