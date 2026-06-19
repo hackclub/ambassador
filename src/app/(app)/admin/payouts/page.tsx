@@ -103,7 +103,7 @@ function PayoutTable({
             <th className="py-4 pr-4 font-bold leading-8">Method</th>
             <th className="py-4 pr-4 font-bold leading-8">Submitted</th>
             <th className="py-4 pr-4 font-bold leading-8">Status</th>
-            <th className="py-4 font-bold leading-8" />
+            <th className="py-4 pr-1 font-bold leading-8" />
           </tr>
         </thead>
         <tbody>
@@ -125,7 +125,7 @@ function PayoutTable({
                   {STATUS_LABEL[payout.status]}
                 </span>
               </td>
-              <td className="py-4 text-right leading-8">
+              <td className="py-4 pr-1 text-right leading-8">
                 <Link
                   href={`/admin/payouts/${payout.id}`}
                   aria-label="Open payout"
