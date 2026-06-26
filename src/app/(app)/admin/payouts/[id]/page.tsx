@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
 import { ExpandableImage } from "@/components/admin/expandable-image";
+import { InvoiceDownloadLink } from "@/components/admin/invoice-download-link";
 import { LineItemReview } from "@/components/admin/line-item-review";
 import { PayoutFulfilmentActions, PayoutReviewActions } from "@/components/admin/payout-review-actions";
 import { PayoutReviewModeClient } from "@/components/admin/payout-review-mode-client";
@@ -169,14 +170,6 @@ export default async function AdminPayoutReviewPage({
                 </>
               )}
           </p>
-          {payout.status === PAYOUT_STATUS_APPROVED ? (
-            <a
-              href={`/api/admin/payouts/${id}/invoice`}
-              className={cn(blackBtn("app-sm"), "mt-4")}
-            >
-              Download HCB invoice
-            </a>
-          ) : null}
         </section>
 
         {/* Details */}
@@ -185,6 +178,9 @@ export default async function AdminPayoutReviewPage({
             <Field label="Legal name" value={name} />
             <Field label="Email" value={payout.ambassador.email} />
             <Field label="Source" value={isManual ? "Manual (created by an admin)" : "Requested by ambassador"} />
+            <Field label={isManual ? "Created" : "Requested"}>
+              <Timestamp value={payout.submittedAt} locale={locale} dateOnly />
+            </Field>
             <Field label="Method" value={payout.bankTransferMethod.toUpperCase()} />
             <Field label="Bank" value={payout.bankingInstitutionName} />
             {payout.bankTransferMethod === "wise" ? (
@@ -449,6 +445,9 @@ export default async function AdminPayoutReviewPage({
         {isPending ? (
           <section>
             <h2 className="text-xl text-foreground">Decision</h2>
+            <p className="mt-1">
+              <InvoiceDownloadLink payoutId={id} />
+            </p>
             <div className="mt-4">
               <PayoutReviewActions
                 payoutId={id}
@@ -461,6 +460,11 @@ export default async function AdminPayoutReviewPage({
         ) : (
           <section>
             <h2 className="text-xl text-foreground">Fulfilment</h2>
+            {payout.status === PAYOUT_STATUS_APPROVED ? (
+              <p className="mt-1">
+                <InvoiceDownloadLink payoutId={id} />
+              </p>
+            ) : null}
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <Field label="Reviewed">
                 {payout.reviewedAt ? <Timestamp value={payout.reviewedAt} locale={locale} /> : "-"}

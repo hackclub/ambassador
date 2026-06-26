@@ -43,5 +43,20 @@ export function LocalDateTime({
         minute: "2-digit",
       };
 
-  return <time dateTime={date.toISOString()}>{date.toLocaleString(locale, options)}</time>;
+  // Hover always reveals the full time in the viewer's own timezone, even when
+  // the visible text is date-only.
+  const title = date.toLocaleString(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+
+  return (
+    <time dateTime={date.toISOString()} title={title}>
+      {date.toLocaleString(locale, options)}
+    </time>
+  );
 }

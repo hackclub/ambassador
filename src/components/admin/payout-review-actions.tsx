@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from "react";
 
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
+import { InvoiceDownloadLink } from "@/components/admin/invoice-download-link";
 import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -131,6 +132,7 @@ export function PayoutReviewActions({
               <Input name="transferLink" type="url" required placeholder="https://hcb.hackclub.com/…" className={fieldClass} />
             </label>
             <HcbTransferHint payoutId={payoutId} />
+            <InvoiceDownloadLink payoutId={payoutId} label="Download the invoice for the HCB transfer" />
             <label className="block text-sm text-secondary">
               Note for the ambassador (optional)
               <Textarea name="publicComment" rows={2} className={fieldClass} placeholder="Shows up on their payout" />

@@ -24,6 +24,7 @@ const EVENT_LABELS: Record<AdminActionEvent, string> = {
   referral_status_updated_by_admin: "Referral status updated",
   payout_balance_adjusted: "Balance manually adjusted",
   payout_created_via_impersonation: "Payout created while impersonating",
+  payout_invoice_downloaded: "Payout invoice downloaded",
   payout_manual_created: "Manual payout created",
   payout_retro_rejected: "Approved payout retroactively rejected",
   payout_reviewed: "Payout reviewed",
@@ -50,6 +51,7 @@ const METADATA_LABELS: Record<string, string> = {
   authorizedHcbUserName: "Authorized HCB name",
   campaignSlug: "Campaign",
   expiresAt: "Expires",
+  filename: "File name",
   flagKey: "Feature flag",
   grantId: "Grant",
   nextOverrideEnabled: "Override enabled",
@@ -166,6 +168,8 @@ export function formatAuditEventSummary(event: AuditEventLike): string {
       );
     case "payout_created_via_impersonation":
       return `Created payout ${formatMetadataValue(metadata.payoutId)} for ${formatMetadataValue(metadata.amountCents)} cents while impersonating this user.`;
+    case "payout_invoice_downloaded":
+      return `Downloaded the HCB invoice for payout ${formatMetadataValue(metadata.payoutId)}.`;
     case "payout_manual_created":
       return `Created a manual payout ${formatMetadataValue(metadata.payoutId)} of ${formatMetadataValue(metadata.amountCents)} cents.`;
     case "payout_retro_rejected":
