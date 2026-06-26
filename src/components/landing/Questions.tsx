@@ -23,8 +23,9 @@ const questions = [
     answers: (
       <ul className="space-y-2 pl-6 list-disc">
         <li>
-          <strong>$100 guaranteed honorarium</strong>, as long as you run 2 or
-          more meetups in June, July, and August (paid at the end of August!)
+          <strong>"$20 honorarium per meetup organised</strong>, across June, July, and
+          August. Meetups must be at least 7 days apart and there must be no more than 
+          5 meetups total.(paid at the end of August!)
         </li>
         <li>
           $20 fund for any supplies like paper, printer ink, pins, and blu-tack
