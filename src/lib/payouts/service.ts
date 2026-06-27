@@ -1248,7 +1248,10 @@ export async function reviewPayout(input: {
         // the entire live balance.
         let owedCents: number;
         if (isFrozen) {
-          owedCents = await settleFrozenBundle(transaction, payout);
+          owedCents = Math.min(
+            await settleFrozenBundle(transaction, payout),
+            user.balance_cents,
+          );
         } else {
           await freezePayoutLineItems(transaction, payout);
           owedCents = user.balance_cents;
@@ -1331,23 +1334,27 @@ export async function reviewPayout(input: {
     // snapshot (minus any bundled item un-verified during review), leaving
     // anything verified since for the next payout; a legacy one pays out the
     // full live balance and snapshots its line items now.
+    const user = (await transaction<{ balance_cents: number }[]>`
+      SELECT COALESCE(balance_cents, 0) AS balance_cents
+      FROM users
+      WHERE id = ${payout.user_id}
+      LIMIT 1
+      FOR UPDATE
+    `).at(0);
+
+    if (!user) {
+      throw new PayoutRequestError("not_found", 404);
+    }
+
     let payoutCents: number;
 
     if (payout.bundle_frozen_at !== null) {
       payoutCents = await settleFrozenBundle(transaction, payout);
-    } else {
-      const user = (await transaction<{ balance_cents: number }[]>`
-        SELECT COALESCE(balance_cents, 0) AS balance_cents
-        FROM users
-        WHERE id = ${payout.user_id}
-        LIMIT 1
-        FOR UPDATE
-      `).at(0);
 
-      if (!user) {
-        throw new PayoutRequestError("not_found", 404);
+      if (payoutCents > user.balance_cents) {
+        throw new PayoutRequestError("insufficient_balance", 409);
       }
-
+    } else {
       payoutCents = user.balance_cents;
       await freezePayoutLineItems(transaction, payout);
     }

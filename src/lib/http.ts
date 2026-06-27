@@ -19,19 +19,23 @@ export function getSafeRedirectPath(
   }
 
   const origin = toOrigin(optionalEnv("CURRENT_DOMAIN"));
-  if (origin !== null) {
-    try {
-      const resolved = new URL(candidate, origin);
-      if (resolved.origin !== origin) {
-        return fallbackPath;
-      }
-      return `${resolved.pathname}${resolved.search}${resolved.hash}`;
-    } catch {
+
+  try {
+    const resolved = new URL(candidate, origin ?? "https://redirect.invalid");
+    if (origin !== null && resolved.origin !== origin) {
       return fallbackPath;
     }
-  }
 
-  return candidate;
+    const path = `${resolved.pathname}${resolved.search}${resolved.hash}`;
+
+    if (!path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) {
+      return fallbackPath;
+    }
+
+    return path;
+  } catch {
+    return fallbackPath;
+  }
 }
 
 export function getAppUrl(path: string, request: Request) {
