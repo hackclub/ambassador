@@ -90,7 +90,7 @@ export default async function PayoutsPage({
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
         <header className="mb-12">
           <p className="font-body text-sm leading-4 text-secondary">Your balance</p>
-          <p className="text-5xl font-bold text-acceptance tabular-nums">{formatUsdCents(balance.balanceCents)}</p>
+          <p className="text-4xl font-bold text-acceptance tabular-nums sm:text-5xl">{formatUsdCents(balance.balanceCents)}</p>
           <p className="mt-4 max-w-prose font-body text-base text-muted-foreground">
             You earn $1.00 for every verified poster and $0.50 for every verified referral.{" "}
             {canSubmit
@@ -194,7 +194,7 @@ export default async function PayoutsPage({
               transactions.map((tx) => (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between gap-3"
+                  className="flex flex-wrap items-center justify-between gap-3"
                 >
                   <div className="min-w-0">
                     <p className="font-body text-sm text-foreground">
@@ -204,7 +204,7 @@ export default async function PayoutsPage({
                       <Timestamp value={tx.createdAt} locale={locale} />
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="shrink-0 text-right">
                     <p
                       className={`font-body text-sm ${tx.amountCents < 0 ? "text-primary" : "text-acceptance"}`}
                     >

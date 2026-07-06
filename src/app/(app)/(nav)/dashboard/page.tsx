@@ -313,7 +313,7 @@ export default async function DashboardPage({
         <header className="flex items-center gap-4">
           {isApproved ? (
             <AmbassadorCircleText
-              className="h-16 w-16 shrink-0 md:h-20 md:w-20"
+              className="h-14 w-14 shrink-0 sm:h-16 sm:w-16 md:h-20 md:w-20"
               slackId={session.slackId}
               fallbackName={session.displayName}
             />
@@ -325,7 +325,7 @@ export default async function DashboardPage({
                 <Icon glyph="checkmark" size={16} className="shrink-0 text-foreground" aria-hidden />
               </p>
             ) : null}
-            <h1 className="font-sub text-4xl font-bold leading-[3rem] text-foreground md:text-5xl md:leading-[3.5rem]">
+            <h1 className="font-sub text-2xl font-bold leading-tight break-words text-foreground sm:text-4xl sm:leading-[3rem] md:text-5xl md:leading-[3.5rem]">
               {t("dashboard.heading", { name: session.displayName })}
             </h1>
           </div>

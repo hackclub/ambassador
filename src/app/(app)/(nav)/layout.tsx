@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { InstallPwaBanner } from "@/components/install-pwa-banner";
 import { Navbar } from "@/components/navbar";
 import { canAccessPosters, getPosterAccessState } from "@/lib/posters/access";
 import { getEffectiveSafeguards } from "@/lib/safeguards";
@@ -46,6 +47,7 @@ export default async function NavLayout({
         displayName={user?.display_name ?? null}
         region={user?.ambassador_region ?? null}
       />
+      <InstallPwaBanner />
       {children}
     </main>
   );

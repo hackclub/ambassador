@@ -33,6 +33,14 @@ app:
     stop: Stop
     stopping: Stopping...
     stop-error: Could not stop
+  install-banner:
+    title: Install the Ambassador app
+    body: Add it to your home screen for quick, full-screen access.
+    install: Install
+    how-to: How to install
+    ios-steps: "Tap the Share icon, then \"Add to Home Screen.\""
+    android-steps: "Open your browser menu, then tap \"Add to Home screen\" or \"Install app.\""
+    dismiss: Dismiss
 
 dev-admin-selector:
   label: dev/admin selector
@@ -262,6 +270,17 @@ posters:
     in_review: Sent to review, a human will check it soon.
     no_qr: We could not read a QR code. Try again with a clearer photo.
     no_match: The QR code did not match any of your pending posters.
+  offline:
+    pending-title: "{count, plural, one {# photo} other {# photos}} saved for later"
+    pending-body-online: You're back online — upload these now to verify them.
+    pending-body-offline: No connection right now. These will stay saved until you upload them.
+    capture-hint: You're offline — this photo will be saved on your device and you can upload it once you're back online.
+    upload-now: Upload now
+    uploading: Uploading...
+    upload-summary: "{verified, plural, =0 {} other {{verified} verified. }}{unmatched, plural, =0 {} other {{unmatched} could not be matched. }}{pending, plural, =0 {} other {{pending} still waiting for a connection.}}"
+    remove-capture: Discard this photo
+    saved-title: Saved for later
+    saved-body: You're offline, so we saved this photo on your device. Re-open the app once you have a connection and tap "Upload now" to verify it.
   errors:
     create-failed: Could not create poster.
     load-failed: Could not load your posters.

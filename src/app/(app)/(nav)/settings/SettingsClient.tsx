@@ -106,7 +106,7 @@ export default function SettingsClient({
       </div>
 
       {(firstName || lastName) && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <LockedLabel text={t("labels.first-name")} hint={authHint} />
             <Input
@@ -220,15 +220,24 @@ function LockedLabel({ text, hint }: { text: string; hint: string }) {
   return (
     <label className="mb-2 flex items-center gap-1.5 font-body text-base tracking-wide text-foreground">
       {text}
-      <span
-        className="relative inline-flex cursor-help"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-      >
-        <Lock size={14} className="text-foreground/40" />
+      <span className="relative inline-flex">
+        {/* A real button (not just hover) so the hint is reachable by tap/focus on touch devices, not only mouse hover. */}
+        <button
+          type="button"
+          onMouseEnter={() => setShow(true)}
+          onMouseLeave={() => setShow(false)}
+          onFocus={() => setShow(true)}
+          onBlur={() => setShow(false)}
+          onClick={() => setShow((prev) => !prev)}
+          aria-label={hint}
+          className="-m-1.5 inline-flex cursor-help items-center justify-center p-1.5"
+        >
+          <Lock size={14} className="text-foreground/40" />
+        </button>
         {show && (
           <span
-            className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-56 -translate-x-1/2 !rounded-none px-3 py-2 font-body text-xs"
+            role="tooltip"
+            className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-56 max-w-[80vw] -translate-x-1/2 !rounded-none px-3 py-2 font-body text-xs"
             style={{ backgroundColor: "#000", color: "#fff" }}
           >
             {hint}

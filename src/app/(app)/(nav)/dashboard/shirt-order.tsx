@@ -719,7 +719,7 @@ function RefreshAddressButton({
       aria-label="Refresh addresses"
       disabled={refreshing}
       onClick={onRefresh}
-      className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center appearance-none border-0 bg-transparent p-0 text-foreground outline-none transition-colors hover:text-acceptance focus-visible:text-acceptance disabled:cursor-not-allowed disabled:opacity-40"
+      className="-m-2.5 inline-flex shrink-0 cursor-pointer items-center justify-center appearance-none border-0 bg-transparent p-2.5 text-foreground outline-none transition-colors hover:text-acceptance focus-visible:text-acceptance disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Icon glyph="view-reload" size={18} />
     </button>

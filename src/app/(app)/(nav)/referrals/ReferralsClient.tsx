@@ -828,7 +828,7 @@ function IconButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex size-9 items-center justify-center rounded-md bg-transparent transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex size-10 items-center justify-center rounded-md bg-transparent transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-50",
         toneClass,
       )}
       {...rest}
