@@ -649,8 +649,8 @@ admin:
         hours-shipped-hint: Stardance hours logged by people your ambassadors referred.
         by-users: "by {count} users"
         for-users: "for {count} users"
-        weighted-grants: "≈ {count} weighted grants · {amount}"
-        weighted-grants-hint: 1 weighted grant = 10 approved hours, worth $8.50.
+        weighted-projects: "≈ {count} weighted projects · {amount}"
+        weighted-projects-hint: 1 weighted project = 10 approved hours, worth $85.
       signups-by-region-title: Signups by region
       signups-by-state-title: Signups by Ambassadors' States
       signups-by-state-hint: Referrals grouped by the US state of the ambassador who drove them (referrals carry no location of their own).

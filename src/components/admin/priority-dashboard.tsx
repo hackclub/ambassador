@@ -58,9 +58,9 @@ const ACTIVITY_METRICS: ActivityMetric[] = [
   "hoursApproved",
 ];
 
-// One weighted grant = 10 approved Stardance hours, worth $8.50.
-const WEIGHTED_GRANT_HOURS = 10;
-const WEIGHTED_GRANT_RATE = 8.5;
+// One weighted project = 10 approved Stardance hours, worth $85.
+const WEIGHTED_PROJECT_HOURS = 10;
+const WEIGHTED_PROJECT_RATE = 85;
 
 const METRIC_STROKE: Record<ActivityMetric, string> = {
   referrals: "var(--chart-rejected)",
@@ -233,8 +233,8 @@ export function PriorityDashboard({
 
   const loggedUsers = scoped(hoursUsers.loggedTotal, hoursUsers.loggedUs);
   const approvedUsers = scoped(hoursUsers.approvedTotal, hoursUsers.approvedUs);
-  const weightedGrants = totalHoursApproved / WEIGHTED_GRANT_HOURS;
-  const weightedGrantDollars = weightedGrants * WEIGHTED_GRANT_RATE;
+  const weightedProjects = totalHoursApproved / WEIGHTED_PROJECT_HOURS;
+  const weightedProjectDollars = weightedProjects * WEIGHTED_PROJECT_RATE;
 
   // Cost buckets resolved to the scope; reimbursements aren't attributable to a
   // region so they sit in the all-regions and non-US totals, never the US one.
@@ -483,13 +483,13 @@ export function PriorityDashboard({
                 <HoursKpi
                   glyph="checkmark"
                   label={t("efficiency.hours-approved")}
-                  hint={t("efficiency.weighted-grants-hint")}
+                  hint={t("efficiency.weighted-projects-hint")}
                   value={hoursFormatter.format(totalHoursApproved)}
                   beside={
                     totalHoursApproved > 0
-                      ? t("efficiency.weighted-grants", {
-                          count: hoursFormatter.format(weightedGrants),
-                          amount: currencyFormatter.format(weightedGrantDollars),
+                      ? t("efficiency.weighted-projects", {
+                          count: hoursFormatter.format(weightedProjects),
+                          amount: currencyFormatter.format(weightedProjectDollars),
                         })
                       : undefined
                   }
@@ -720,7 +720,7 @@ function HoursKpi({
   value: string;
   sub?: React.ReactNode;
   // Rendered inline to the right of the figure, in the same quiet font as the
-  // sub lines — used to sit the weighted-grant tally beside the hours count.
+  // sub lines — used to sit the weighted-project tally beside the hours count.
   beside?: React.ReactNode;
   hint?: string;
 }) {
