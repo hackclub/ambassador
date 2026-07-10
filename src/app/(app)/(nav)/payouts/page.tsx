@@ -7,6 +7,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { pillVariants } from "@/components/ui/pill";
 import {
   formatUsdCents,
+  isUsAmbassador,
   listBalanceTransactionsForUser,
   listPayoutsForUser,
   MIN_AMBASSADOR_PAYOUT_CENTS,
@@ -65,9 +66,10 @@ export default async function PayoutsPage({
     ? Math.min(Math.max(requestedPage, 1), 100_000)
     : 1;
 
-  const [user, safeguards] = await Promise.all([
+  const [user, safeguards, allowAch] = await Promise.all([
     getPosterAccessState(session.sub),
     getEffectiveSafeguards(session.sub),
+    isUsAmbassador(session.sub),
   ]);
   if (user === null) forbidden();
 
@@ -130,7 +132,7 @@ export default async function PayoutsPage({
                 </p>
                 <RequestPayoutForm
                   amountLabel={formatUsdCents(balance.balanceCents)}
-                  allowAch={user.ambassador_region === "United States"}
+                  allowAch={allowAch}
                 />
               </>
             )}

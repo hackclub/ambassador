@@ -4,6 +4,7 @@ import type { Sql, TransactionSql } from "postgres";
 
 import sql from "@/lib/database/client";
 import { ensureSchema } from "@/lib/database/ensure-schema";
+import { resolveDetectedAmbassadorRegion } from "@/lib/settings";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 type Executor = Sql<{}> | TransactionSql<{}>;
@@ -303,6 +304,35 @@ export async function getPayoutBalanceForUser(userId: string) {
   return { balanceCents: await getBalanceCents(sql, userId) };
 }
 
+/**
+ * Whether the ambassador is in the US, resolved from the verified address
+ * data: the HCA address country, falling back to the latest application's
+ * country. Never the settings region, which is self-editable, so switching
+ * your region can't surface ACH (a US bank rail) to non-US ambassadors.
+ */
+export async function isUsAmbassador(userId: string) {
+  await ensureSchema();
+  return resolveIsUsAmbassador(sql, userId);
+}
+
+async function resolveIsUsAmbassador(executor: Executor, userId: string) {
+  const row = (await executor<{ country: string | null }[]>`
+    SELECT COALESCE(NULLIF(TRIM(u.hca_country), ''), latest_application.address_country) AS country
+    FROM users u
+    LEFT JOIN LATERAL (
+      SELECT address_country
+      FROM applications
+      WHERE user_id = u.id
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    ) latest_application ON TRUE
+    WHERE u.id = ${userId}
+    LIMIT 1
+  `).at(0);
+
+  return resolveDetectedAmbassadorRegion(row?.country) === "United States";
+}
+
 export async function listPayoutsForUser(userId: string) {
   await ensureSchema();
   const row = (await sql<{ balance_cents: number; payouts: PayoutRow[] }[]>`
@@ -411,9 +441,8 @@ export async function createPayoutForUser(input: {
   await ensureSchema();
 
   return sql.begin(async (transaction) => {
-    const user = (await transaction<{ balance_cents: number; has_pending_payout: boolean; ambassador_region: string | null }[]>`
+    const user = (await transaction<{ balance_cents: number; has_pending_payout: boolean }[]>`
       SELECT COALESCE(u.balance_cents, 0) AS balance_cents,
-             u.ambassador_region,
              EXISTS (
                SELECT 1
                FROM payouts
@@ -435,7 +464,7 @@ export async function createPayoutForUser(input: {
     // pays out through Wise.
     if (
       input.bankInfo.bankTransferMethod === PAYOUT_METHOD_ACH &&
-      user.ambassador_region !== "United States"
+      !(await resolveIsUsAmbassador(transaction, input.userId))
     ) {
       throw new PayoutRequestError("ach_not_available_for_region", 400);
     }

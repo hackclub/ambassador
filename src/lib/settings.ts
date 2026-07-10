@@ -128,6 +128,7 @@ const REGION_NAMES: Array<readonly [string, AmbassadorRegion]> = [
   ["wales", "United Kingdom"],
   ["united states", "United States"],
   ["united states of america", "United States"],
+  ["usa", "United States"],
 ];
 
 function normalizeRegionName(value: string) {

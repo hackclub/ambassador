@@ -238,9 +238,13 @@ export default async function AdminPayoutReviewPage({
                     content: (
                       <div className="flex flex-wrap items-start gap-4">
                         {proofUrl ? (
-                          <ExpandableImage src={proofUrl} alt={formatPosterLabel(poster)} />
+                          <ExpandableImage
+                            src={proofUrl}
+                            alt={formatPosterLabel(poster)}
+                            thumbnailClassName="block h-64 w-64 overflow-hidden border border-foreground/30 bg-background transition-opacity hover:opacity-80"
+                          />
                         ) : (
-                          <div className="flex h-16 w-16 items-center justify-center border border-foreground/15 bg-muted font-body text-xs text-muted-foreground">
+                          <div className="flex h-64 w-64 items-center justify-center border border-foreground/15 bg-muted font-body text-xs text-muted-foreground">
                             no proof
                           </div>
                         )}
