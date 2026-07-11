@@ -39,7 +39,20 @@ export type InvoiceService = {
 
 export type InvoicePayment =
   | { method: "ach"; bankName: string; accountNumber: string; routingNumber: string }
-  | { method: "wise"; bankName: string; iban: string };
+  | { method: "wise"; bankName: string; iban: string; currency: string | null };
+
+/**
+ * Indicative local-currency equivalent of the amount due, for Wise payouts.
+ * HCB enters the transfer in the recipient's currency, so the invoice shows
+ * the converted figure alongside USD.
+ */
+export type InvoiceLocalAmount = {
+  currency: string;
+  /** Major units of `currency`. */
+  amount: number;
+  /** USD to `currency` rate the amount was converted at. */
+  rate: number;
+};
 
 export type Invoice = {
   /** Rendered after a leading "#". */
@@ -48,6 +61,7 @@ export type Invoice = {
   from: InvoiceParty;
   service: InvoiceService;
   payment: InvoicePayment;
+  localAmountDue: InvoiceLocalAmount | null;
 };
 
 // === Fixed design ==========================================================
@@ -96,6 +110,7 @@ const LABELS = {
   accountNumber: "Account Number:",
   routingNumber: "Routing Number:",
   iban: "IBAN:",
+  currency: "Currency:",
 } as const;
 
 const FONT_FILES = {
@@ -287,9 +302,24 @@ function achLines(payment: InvoicePayment) {
 
 function wiseLines(payment: InvoicePayment) {
   if (payment.method !== "wise") {
-    return [LABELS.bankName, LABELS.iban];
+    return [LABELS.bankName, LABELS.iban, LABELS.currency];
   }
-  return [`${LABELS.bankName} ${payment.bankName}`, `${LABELS.iban} ${payment.iban}`];
+  return [
+    `${LABELS.bankName} ${payment.bankName}`,
+    `${LABELS.iban} ${payment.iban}`,
+    ...(payment.currency ? [`${LABELS.currency} ${payment.currency}`] : []),
+  ];
+}
+
+/** "EUR 11.34" style, with the currency's own minor-unit precision. */
+function formatLocalAmountDue(local: InvoiceLocalAmount) {
+  const amount = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: local.currency,
+    currencyDisplay: "code",
+  }).format(local.amount);
+  const rate = new Intl.NumberFormat("en-US", { maximumSignificantDigits: 5 }).format(local.rate);
+  return `≈ ${amount} (1 USD = ${rate} ${local.currency})`;
 }
 
 // === Entry point ===========================================================
@@ -446,6 +476,15 @@ export async function createInvoicePdf(invoice: Invoice): Promise<Uint8Array<Arr
     color: COLORS.accent,
     rightEdge: RIGHT_EDGE,
   });
+  if (invoice.localAmountDue) {
+    drawText(drawer, formatLocalAmountDue(invoice.localAmountDue), {
+      x: 0,
+      y: AMOUNT_DUE_Y + 18,
+      weight: "medium",
+      color: COLORS.muted,
+      rightEdge: RIGHT_EDGE,
+    });
+  }
 
   // --- Payment box (both methods shown; the used one is filled in) --------
   const payHeight = PAY_BOX_BOTTOM - PAY_BOX_TOP;

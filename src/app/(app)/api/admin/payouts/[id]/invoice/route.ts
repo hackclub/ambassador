@@ -30,14 +30,15 @@ function slugifyLegalName(name: string | null | undefined) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: RouteContext<"/api/admin/payouts/[id]/invoice">,
 ) {
   try {
     const session = await requireAdminActorSession();
     const { id } = await context.params;
     const payout = await getAdminPayout(id);
-    const pdf = await renderPayoutInvoicePdf(payout);
+    const withLocalEstimate = new URL(request.url).searchParams.get("local") === "1";
+    const pdf = await renderPayoutInvoicePdf(payout, withLocalEstimate);
 
     const filename = `${payout.id}-${slugifyLegalName(payout.ambassador.legalName)}-${randomFilenameSuffix(5)}.pdf`;
 

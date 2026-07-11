@@ -9,7 +9,7 @@ import {
 export const runtime = "nodejs";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: RouteContext<"/api/payouts/[id]/invoice">,
 ) {
   try {
@@ -22,7 +22,8 @@ export async function GET(
     if (payout.status !== PAYOUT_STATUS_APPROVED) {
       throw new PayoutRequestError("invoice_unavailable", 409);
     }
-    const pdf = await renderPayoutInvoicePdf(payout);
+    const withLocalEstimate = new URL(request.url).searchParams.get("local") === "1";
+    const pdf = await renderPayoutInvoicePdf(payout, withLocalEstimate);
 
     return new Response(pdf, {
       headers: {

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { currencyForIban, getLocalAmountForIban } from "@/lib/payouts/fx";
 import { createInvoicePdf, type Invoice, type InvoicePayment } from "@/lib/payouts/pdf";
 
 // The full, joined payout shape returned by getAdminPayout (ambassador identity,
@@ -22,7 +23,12 @@ function buildPayment(payout: PayoutDetails): InvoicePayment {
     if (!payout.iban) {
       throw new Error("Payout is missing an IBAN for a Wise transfer.");
     }
-    return { method: "wise", bankName: payout.bankingInstitutionName, iban: payout.iban };
+    return {
+      method: "wise",
+      bankName: payout.bankingInstitutionName,
+      iban: payout.iban,
+      currency: currencyForIban(payout.iban),
+    };
   }
 
   if (!payout.accountNumber || !payout.routingNumber) {
@@ -37,7 +43,10 @@ function buildPayment(payout: PayoutDetails): InvoicePayment {
 }
 
 /** Map a payout (as returned by getAdminPayout) onto the invoice SDK input. */
-export function buildPayoutInvoice(payout: PayoutDetails): Invoice {
+export function buildPayoutInvoice(
+  payout: PayoutDetails,
+  localAmountDue: Invoice["localAmountDue"],
+): Invoice {
   return {
     number: payout.id,
     issued: new Date(payout.submittedAt),
@@ -51,10 +60,19 @@ export function buildPayoutInvoice(payout: PayoutDetails): Invoice {
       amountCents: payout.amountCents,
     },
     payment: buildPayment(payout),
+    localAmountDue,
   };
 }
 
-/** Render a payout invoice PDF from the joined payout details. */
-export function renderPayoutInvoicePdf(payout: PayoutDetails) {
-  return createInvoicePdf(buildPayoutInvoice(payout));
+/**
+ * Render a payout invoice PDF from the joined payout details. HCB sends Wise
+ * transfers in the recipient's local currency, so `withLocalEstimate` adds an
+ * indicative converted amount-due line when a rate is available.
+ */
+export async function renderPayoutInvoicePdf(payout: PayoutDetails, withLocalEstimate: boolean) {
+  const localAmountDue =
+    withLocalEstimate && payout.bankTransferMethod === "wise"
+      ? await getLocalAmountForIban(payout.iban, payout.amountCents)
+      : null;
+  return createInvoicePdf(buildPayoutInvoice(payout, localAmountDue));
 }

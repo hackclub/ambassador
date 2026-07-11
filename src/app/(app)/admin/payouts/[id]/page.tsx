@@ -13,6 +13,7 @@ import { PosterPlacementMap } from "@/components/admin/poster-placement-map";
 import { Timestamp } from "@/components/timestamp";
 import { buttonVariants } from "@/components/ui/button";
 import { pillVariants } from "@/components/ui/pill";
+import { formatLocalAmount, getLocalAmountForIban } from "@/lib/payouts/fx";
 import {
   formatUsdCents,
   getAdminPayout,
@@ -83,6 +84,17 @@ export default async function AdminPayoutReviewPage({
   const isManual = payout.createdByAdminId !== null;
   const decisionAmountCents = isManual ? payout.amountCents : breakdown.balanceCents;
   const name = payout.ambassador.legalName ?? payout.ambassador.displayName;
+
+  // HCB sends Wise transfers in the recipient's local currency, so show an
+  // indicative converted figure next to the USD amounts. Null for ACH,
+  // USD-denominated accounts, or when no rate is available.
+  const isWise = payout.bankTransferMethod === "wise";
+  const [localAmount, decisionLocalAmount] = isWise
+    ? await Promise.all([
+        getLocalAmountForIban(payout.iban, payout.amountCents),
+        getLocalAmountForIban(payout.iban, decisionAmountCents),
+      ])
+    : [null, null];
 
   const proofUrls = new Map(
     await Promise.all(
@@ -159,6 +171,11 @@ export default async function AdminPayoutReviewPage({
                 : "Not paid out"}
           </p>
           <p className="text-4xl text-foreground">{formatUsdCents(payout.amountCents)}</p>
+          {localAmount ? (
+            <p className="mt-1 font-body text-sm text-secondary">
+              ≈ {formatLocalAmount(localAmount)} at current rates
+            </p>
+          ) : null}
           <p className="mt-1 font-body text-sm text-muted-foreground">
             {isPending
               ? isManual
@@ -449,13 +466,21 @@ export default async function AdminPayoutReviewPage({
         {isPending ? (
           <section>
             <h2 className="text-xl text-foreground">Decision</h2>
-            <p className="mt-1">
+            <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
               <InvoiceDownloadLink payoutId={id} />
+              {decisionLocalAmount ? (
+                <InvoiceDownloadLink
+                  payoutId={id}
+                  local
+                  label={`With ${decisionLocalAmount.currency} estimate`}
+                />
+              ) : null}
             </p>
             <div className="mt-4">
               <PayoutReviewActions
                 payoutId={id}
                 amountLabel={formatUsdCents(decisionAmountCents)}
+                localAmountLabel={decisionLocalAmount ? formatLocalAmount(decisionLocalAmount) : null}
                 canApprove={decisionAmountCents > 0}
                 manual={isManual}
               />
@@ -465,8 +490,15 @@ export default async function AdminPayoutReviewPage({
           <section>
             <h2 className="text-xl text-foreground">Fulfilment</h2>
             {payout.status === PAYOUT_STATUS_APPROVED ? (
-              <p className="mt-1">
+              <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                 <InvoiceDownloadLink payoutId={id} />
+                {localAmount ? (
+                  <InvoiceDownloadLink
+                    payoutId={id}
+                    local
+                    label={`With ${localAmount.currency} estimate`}
+                  />
+                ) : null}
               </p>
             ) : null}
             <div className="mt-4 grid gap-4 sm:grid-cols-2">

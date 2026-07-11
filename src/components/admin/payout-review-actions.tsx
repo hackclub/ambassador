@@ -79,11 +79,14 @@ function RejectModeOptions({
 export function PayoutReviewActions({
   payoutId,
   amountLabel,
+  localAmountLabel,
   canApprove,
   manual,
 }: {
   payoutId: string;
   amountLabel: string;
+  /** Indicative local-currency equivalent for Wise payouts, e.g. "EUR 11.34". */
+  localAmountLabel: string | null;
   canApprove: boolean;
   manual: boolean;
 }) {
@@ -127,12 +130,26 @@ export function PayoutReviewActions({
           >
             <input type="hidden" name="redirectTo" value={redirectTo} />
             <input type="hidden" name="action" value="approve" />
+            {localAmountLabel ? (
+              <p className="font-body text-sm text-secondary">
+                ≈ {localAmountLabel} at current rates
+              </p>
+            ) : null}
             <label className="block text-sm text-secondary">
               HCB transfer link
               <Input name="transferLink" type="url" required placeholder="https://hcb.hackclub.com/…" className={fieldClass} />
             </label>
             <HcbTransferHint payoutId={payoutId} />
-            <InvoiceDownloadLink payoutId={payoutId} label="Download the invoice for the HCB transfer" />
+            <div className="flex flex-col gap-1">
+              <InvoiceDownloadLink payoutId={payoutId} label="Download the invoice for the HCB transfer" />
+              {localAmountLabel ? (
+                <InvoiceDownloadLink
+                  payoutId={payoutId}
+                  local
+                  label="Download with the local currency estimate"
+                />
+              ) : null}
+            </div>
             <label className="block text-sm text-secondary">
               Note for the ambassador (optional)
               <Textarea name="publicComment" rows={2} className={fieldClass} placeholder="Shows up on their payout" />
