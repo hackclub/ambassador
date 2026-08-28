@@ -8,6 +8,8 @@ import { resolveDetectedAmbassadorRegion } from "@/lib/settings";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 type Executor = Sql<{}> | TransactionSql<{}>;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+type Transaction = TransactionSql<{}>;
 
 export const PAYOUT_STATUS_PENDING = "pending";
 export const PAYOUT_STATUS_REJECTED = "rejected";
@@ -16,7 +18,6 @@ export const PAYOUT_STATUS_APPROVED = "approved";
 export const PAYOUT_METHOD_WISE = "wise";
 export const PAYOUT_METHOD_ACH = "ach";
 
-export const MIN_AMBASSADOR_PAYOUT_CENTS = 2_000;
 /** Per-item payout rates. The ledger triggers in 00034 use the same numbers. */
 export const POSTER_PAYOUT_CENTS = 100;
 export const REFERRAL_PAYOUT_CENTS = 50;
@@ -436,7 +437,6 @@ export async function createPayoutForUser(input: {
   userId: string;
   bankInfo: BankInfo;
   ambassadorNotes?: string | null;
-  minimumAmountCents: number;
 }) {
   await ensureSchema();
 
@@ -473,10 +473,6 @@ export async function createPayoutForUser(input: {
 
     if (user.has_pending_payout) {
       throw new PayoutRequestError("payout_already_pending", 409);
-    }
-
-    if (balanceCents < input.minimumAmountCents) {
-      throw new PayoutRequestError("minimum_payout_not_met", 409);
     }
 
     if (balanceCents <= 0) {
@@ -855,8 +851,54 @@ export type PayoutLedgerEntry = {
   reason: string;
   publicNote: string | null;
   note: string | null;
+  payoutId: string | null;
+  /** Bundled into the payout being viewed, so it pays out with it. */
+  bundled: boolean;
+  /** Already undone by a reversing event, so it can't be removed again. */
+  reversed: boolean;
+  /** This entry *is* the reversal of another adjustment. */
+  isReversal: boolean;
   createdAt: string;
 };
+
+type BalanceAdjustmentRow = {
+  id: string;
+  amount_cents: number;
+  reason: string;
+  public_note: string | null;
+  note: string | null;
+  payout_id: string | null;
+  reverses_event_id: string | null;
+  reversed: boolean;
+  created_at: string;
+};
+
+const BALANCE_ADJUSTMENT_SELECT = sql`
+  SELECT e.id, e.amount_cents, e.reason, e.public_note, e.note, e.payout_id,
+         e.reverses_event_id, e.created_at,
+         EXISTS (
+           SELECT 1 FROM payout_balance_events r WHERE r.reverses_event_id = e.id
+         ) AS reversed
+  FROM payout_balance_events e
+`;
+
+function serializeBalanceAdjustment(
+  row: BalanceAdjustmentRow,
+  bundledIntoPayoutId: string | null,
+): PayoutLedgerEntry {
+  return {
+    id: row.id,
+    amountCents: row.amount_cents,
+    reason: row.reason,
+    publicNote: row.public_note,
+    note: row.note,
+    payoutId: row.payout_id,
+    bundled: bundledIntoPayoutId !== null && row.payout_id === bundledIntoPayoutId,
+    reversed: row.reversed,
+    isReversal: row.reverses_event_id !== null,
+    createdAt: row.created_at,
+  };
+}
 
 /**
  * Everything that makes up a payout, for the admin review screen. Posters and
@@ -903,6 +945,7 @@ export async function getPayoutBreakdown(payoutId: string) {
       posters: [] as PayoutPosterLineItem[],
       referrals: [] as PayoutReferralLineItem[],
       ledger: [] as PayoutLedgerEntry[],
+      bundlesAdjustments: false,
     };
   }
 
@@ -1008,21 +1051,11 @@ export async function getPayoutBreakdown(payoutId: string) {
           WHERE pr.payout_id = ${payoutId}
           ORDER BY r.referred_at DESC
         `,
-    sql<
-      {
-        id: string;
-        amount_cents: number;
-        reason: string;
-        public_note: string | null;
-        note: string | null;
-        created_at: string;
-      }[]
-    >`
-      SELECT id, amount_cents, reason, public_note, note, created_at
-      FROM payout_balance_events
-      WHERE user_id = ${payout.user_id}
-        AND reason IN ('manual_adjustment', 'poster_unverified', 'referral_unverified')
-      ORDER BY seq DESC
+    sql<BalanceAdjustmentRow[]>`
+      ${BALANCE_ADJUSTMENT_SELECT}
+      WHERE e.user_id = ${payout.user_id}
+        AND e.reason IN ('manual_adjustment', 'poster_unverified', 'referral_unverified')
+      ORDER BY e.seq DESC
       LIMIT 50
     `,
   ]);
@@ -1070,14 +1103,7 @@ export async function getPayoutBreakdown(payoutId: string) {
     : payout.balance_cents - posterCounted - referralCounted;
   const balanceCents = frozen ? posterCounted + referralCounted + miscCents : payout.balance_cents;
 
-  const ledger: PayoutLedgerEntry[] = ledgerRows.map((row) => ({
-    id: row.id,
-    amountCents: row.amount_cents,
-    reason: row.reason,
-    publicNote: row.public_note,
-    note: row.note,
-    createdAt: row.created_at,
-  }));
+  const ledger = ledgerRows.map((row) => serializeBalanceAdjustment(row, payoutId));
 
   return {
     balanceCents,
@@ -1087,6 +1113,9 @@ export async function getPayoutBreakdown(payoutId: string) {
     posters,
     referrals,
     ledger,
+    // Whether an adjustment made here rides along with this payout rather than
+    // only moving the balance: a pending, frozen, requested payout.
+    bundlesAdjustments: isPending && frozen,
   };
 }
 
@@ -1565,6 +1594,174 @@ export async function updatePayoutTransferLink(input: {
   });
 }
 
+type AdjustmentPayoutRow = {
+  id: string;
+  user_id: string;
+  status: PayoutStatus;
+  amount_cents: number;
+  created_by_admin_id: string | null;
+  bundle_frozen_at: string | null;
+};
+
+/**
+ * What a pending payout has already claimed from the balance. Approving that
+ * payout debits this much, so a manual deduction may never take the balance
+ * below it: the payout would fail to approve. Only a frozen requested payout
+ * reserves anything, since a legacy one is settled from the live balance.
+ */
+async function reservedForPendingPayouts(executor: Executor, userId: string) {
+  return (
+    (await executor<{ cents: number }[]>`
+      SELECT COALESCE(SUM(amount_cents), 0)::int AS cents
+      FROM payouts
+      WHERE user_id = ${userId}
+        AND status = ${PAYOUT_STATUS_PENDING}
+        AND created_by_admin_id IS NULL
+        AND bundle_frozen_at IS NOT NULL
+    `).at(0)?.cents ?? 0
+  );
+}
+
+/** A payout whose frozen amount moves with an adjustment made against it. */
+function bundlesAdjustments(payout: AdjustmentPayoutRow) {
+  return (
+    payout.status === PAYOUT_STATUS_PENDING &&
+    !isManualPayout(payout) &&
+    payout.bundle_frozen_at !== null
+  );
+}
+
+/**
+ * The two stages behind every manual adjustment.
+ *
+ * Stage one always happens: a ledger event moves the ambassador's balance, the
+ * same way it always has. Stage two is bundling, and only happens when
+ * `payoutId` names their pending frozen payout: the payout's snapshot amount
+ * moves by the same cents, so the adjustment is paid out with *that* payout
+ * instead of rolling into their next one. Nothing about the ledger triggers or
+ * the balance itself changes; the payout total is simply kept in step.
+ */
+async function applyBalanceAdjustment(
+  transaction: Transaction,
+  input: {
+    userId: string;
+    adminUserId: string;
+    amountCents: number;
+    note: string;
+    publicNote?: string | null;
+    payoutId?: string | null;
+    reversesEventId?: string | null;
+    /** Reversals refuse to touch a payout that has already been decided. */
+    requirePayoutPending?: boolean;
+  },
+) {
+  // Lock the payout before the user, the order reviewPayout takes.
+  const payout =
+    input.payoutId != null
+      ? (await transaction<AdjustmentPayoutRow[]>`
+          SELECT id, user_id, status, amount_cents, created_by_admin_id, bundle_frozen_at
+          FROM payouts
+          WHERE id = ${input.payoutId}
+          LIMIT 1
+          FOR UPDATE
+        `).at(0) ?? null
+      : null;
+
+  // A cross-linked payout must belong to the same user we're adjusting, so an
+  // adjustment can't reference another user's payout id.
+  if (input.payoutId != null && (payout === null || payout.user_id !== input.userId)) {
+    throw new PayoutRequestError("invalid_payout", 400);
+  }
+
+  if (
+    payout !== null &&
+    input.requirePayoutPending === true &&
+    payout.status !== PAYOUT_STATUS_PENDING
+  ) {
+    throw new PayoutRequestError("payout_already_finalized", 409);
+  }
+
+  const user = (await transaction<{ balance_cents: number }[]>`
+    SELECT COALESCE(balance_cents, 0) AS balance_cents
+    FROM users
+    WHERE id = ${input.userId}
+    LIMIT 1
+    FOR UPDATE
+  `).at(0);
+
+  if (!user) {
+    throw new PayoutRequestError("not_found", 404);
+  }
+
+  const bundle = payout !== null && bundlesAdjustments(payout);
+  const nextPayoutCents = payout !== null && bundle ? payout.amount_cents + input.amountCents : null;
+
+  // A payout has to stay worth paying, and the database agrees: amount_cents
+  // carries a positive check constraint.
+  if (nextPayoutCents !== null && nextPayoutCents <= 0) {
+    throw new PayoutRequestError("adjustment_exceeds_payout", 409);
+  }
+
+  const reservedCents = await reservedForPendingPayouts(transaction, input.userId);
+  const nextBalanceCents = user.balance_cents + input.amountCents;
+  // Bundling moves the reservation by the same cents it moves the balance, so
+  // the headroom between them never changes.
+  const nextReservedCents = bundle ? reservedCents + input.amountCents : reservedCents;
+
+  if (nextBalanceCents < nextReservedCents) {
+    throw new PayoutRequestError(
+      bundle
+        ? "insufficient_balance"
+        : nextReservedCents > 0
+          ? "payout_bundle_reserved"
+          : "balance_would_go_negative",
+      409,
+    );
+  }
+
+  const row = (await transaction<{ balance_after_cents: number }[]>`
+    INSERT INTO payout_balance_events (
+      id, user_id, payout_id, amount_cents, reason, note, public_note, created_by,
+      reverses_event_id
+    )
+    VALUES (
+      ${crypto.randomUUID()}, ${input.userId}, ${input.payoutId ?? null}, ${input.amountCents},
+      ${"manual_adjustment"}, ${input.note}, ${input.publicNote ?? null}, ${input.adminUserId},
+      ${input.reversesEventId ?? null}
+    )
+    RETURNING balance_after_cents
+  `.catch((error: unknown) => {
+    // The partial unique index on reverses_event_id: something removed this
+    // adjustment between our read and our write.
+    if ((error as { code?: string }).code === "23505") {
+      throw new PayoutRequestError("already_reversed", 409);
+    }
+    throw error;
+  })).at(0);
+
+  if (nextPayoutCents !== null && payout !== null) {
+    await transaction`
+      UPDATE payouts
+      SET amount_cents = ${nextPayoutCents}, updated_at = NOW()
+      WHERE id = ${payout.id}
+    `;
+  }
+
+  return {
+    userId: input.userId,
+    amountCents: input.amountCents,
+    balanceCents: row?.balance_after_cents ?? 0,
+    bundled: bundle,
+    payoutId: payout?.id ?? null,
+    payoutAmountCents: nextPayoutCents,
+  };
+}
+
+/**
+ * Credit or debit an ambassador's balance by hand. Pass `payoutId` to bundle
+ * the adjustment into their pending payout as well; without it the money just
+ * sits in the balance and rolls into whatever they request next.
+ */
 export async function adjustUserBalance(input: {
   userId: string;
   adminUserId: string;
@@ -1575,43 +1772,106 @@ export async function adjustUserBalance(input: {
 }) {
   await ensureSchema();
 
+  return sql.begin((transaction) => applyBalanceAdjustment(transaction, input));
+}
+
+/**
+ * Undo a manual adjustment. Nothing is deleted: the reversal is an opposite
+ * ledger event, and if the original was bundled into a payout the payout total
+ * comes back down with it. Reversible exactly once, enforced by a unique index
+ * on reverses_event_id.
+ */
+export async function reverseBalanceAdjustment(input: {
+  eventId: string;
+  userId: string;
+  adminUserId: string;
+}) {
+  await ensureSchema();
+
   return sql.begin(async (transaction) => {
-    const user = (await transaction<{ id: string }[]>`
-      SELECT id FROM users WHERE id = ${input.userId} LIMIT 1 FOR UPDATE
+    const event = (await transaction<
+      {
+        id: string;
+        amount_cents: number;
+        reason: string;
+        note: string | null;
+        public_note: string | null;
+        payout_id: string | null;
+        reverses_event_id: string | null;
+      }[]
+    >`
+      SELECT id, amount_cents, reason, note, public_note, payout_id, reverses_event_id
+      FROM payout_balance_events
+      WHERE id = ${input.eventId} AND user_id = ${input.userId}
+      LIMIT 1
+      FOR UPDATE
     `).at(0);
 
-    if (!user) {
+    if (!event) {
       throw new PayoutRequestError("not_found", 404);
     }
 
-    // A cross-linked payout must belong to the same user we're adjusting, so an
-    // adjustment can't reference another user's payout id.
-    if (input.payoutId != null) {
-      const payout = (await transaction<{ user_id: string }[]>`
-        SELECT user_id FROM payouts WHERE id = ${input.payoutId} LIMIT 1
-      `).at(0);
-      if (!payout || payout.user_id !== input.userId) {
-        throw new PayoutRequestError("invalid_payout", 400);
-      }
+    // Only adjustments an admin made by hand come off again. A reversal isn't
+    // itself reversible: adjust the balance again instead.
+    if (event.reason !== "manual_adjustment" || event.reverses_event_id !== null) {
+      throw new PayoutRequestError("not_reversible", 409);
     }
 
-    const row = (await transaction<{ balance_after_cents: number }[]>`
-      INSERT INTO payout_balance_events (
-        id, user_id, payout_id, amount_cents, reason, note, public_note, created_by
-      )
-      VALUES (
-        ${crypto.randomUUID()}, ${input.userId}, ${input.payoutId ?? null}, ${input.amountCents},
-        ${"manual_adjustment"}, ${input.note}, ${input.publicNote ?? null}, ${input.adminUserId}
-      )
-      RETURNING balance_after_cents
+    const reversal = (await transaction<{ id: string }[]>`
+      SELECT id FROM payout_balance_events WHERE reverses_event_id = ${event.id} LIMIT 1
     `).at(0);
 
-    return {
+    if (reversal) {
+      throw new PayoutRequestError("already_reversed", 409);
+    }
+
+    return applyBalanceAdjustment(transaction, {
       userId: input.userId,
-      amountCents: input.amountCents,
-      balanceCents: row?.balance_after_cents ?? 0,
-    };
+      adminUserId: input.adminUserId,
+      amountCents: -event.amount_cents,
+      note: `Removed adjustment: ${event.note ?? "no reason given"}`,
+      publicNote: event.public_note === null ? null : `Reversed: ${event.public_note}`,
+      payoutId: event.payout_id,
+      reversesEventId: event.id,
+      requirePayoutPending: true,
+    });
   });
+}
+
+/**
+ * The balance side of the admin user screen: what they hold, what a pending
+ * payout has already claimed, and the manual adjustments behind it.
+ */
+export async function getUserBalanceAdmin(userId: string) {
+  await ensureSchema();
+
+  const [balanceCents, reservedCents, pending, rows] = await Promise.all([
+    getBalanceCents(sql, userId),
+    reservedForPendingPayouts(sql, userId),
+    sql<{ id: string }[]>`
+      SELECT id
+      FROM payouts
+      WHERE user_id = ${userId}
+        AND status = ${PAYOUT_STATUS_PENDING}
+        AND created_by_admin_id IS NULL
+      ORDER BY created_at DESC
+      LIMIT 1
+    `.then((found) => found.at(0) ?? null),
+    sql<BalanceAdjustmentRow[]>`
+      ${BALANCE_ADJUSTMENT_SELECT}
+      WHERE e.user_id = ${userId}
+        AND e.reason = 'manual_adjustment'
+      ORDER BY e.seq DESC
+      LIMIT 10
+    `,
+  ]);
+
+  return {
+    balanceCents,
+    reservedCents,
+    pendingPayoutId: pending?.id ?? null,
+    adjustments: rows.map((row) => serializeBalanceAdjustment(row, null)),
+  };
 }
 
 export function parseCreatePayoutPayload(payload: Record<string, unknown>) {

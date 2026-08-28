@@ -11,7 +11,6 @@ const inputClass =
 
 const ERROR_MESSAGES: Record<string, string> = {
   payout_already_pending: "You already have a payout under review.",
-  minimum_payout_not_met: "You need at least $20.00 to request a payout.",
   insufficient_balance: "Your balance is too low to request a payout.",
   invalid_iban: "That IBAN doesn't look right.",
   invalid_account_number: "That account number doesn't look right.",

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import type { ReactNode } from "react";
 
+import { BalanceAdjustForm, RemoveAdjustmentButton } from "@/components/admin/balance-adjust-form";
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
 import { ExpandableImage } from "@/components/admin/expandable-image";
 import { InvoiceDownloadLink } from "@/components/admin/invoice-download-link";
@@ -379,51 +380,57 @@ export default async function AdminPayoutReviewPage({
             <span className="text-xs text-secondary">{formatUsdCents(breakdown.miscCents)}</span>
           </div>
           <p className="mt-1 font-body text-sm text-muted-foreground">
-            Meetup stuff and deductions.
+            {breakdown.bundlesAdjustments
+              ? "Meetup stuff and deductions. Anything added here lands in their balance and rides along with this payout."
+              : "Meetup stuff and deductions."}
           </p>
           {breakdown.ledger.length > 0 ? (
             <div className="mt-4 space-y-2">
-              {breakdown.ledger.map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between gap-3 font-body text-sm">
-                  <span className="text-foreground">
-                    {entry.publicNote ?? entry.note ?? entry.reason.replaceAll("_", " ")}
-                    <span className="block text-xs text-muted-foreground">
-                      <Timestamp value={entry.createdAt} locale={locale} />
+              {breakdown.ledger.map((entry) => {
+                // Removable while the payout it rides on is still pending: a
+                // hand-made adjustment, bundled here, not already taken off.
+                const removable =
+                  breakdown.bundlesAdjustments &&
+                  entry.reason === "manual_adjustment" &&
+                  entry.bundled &&
+                  !entry.isReversal &&
+                  !entry.reversed;
+
+                return (
+                  <div key={entry.id} className="flex items-center justify-between gap-3 font-body text-sm">
+                    <span className="text-foreground">
+                      {entry.publicNote ?? entry.note ?? entry.reason.replaceAll("_", " ")}
+                      <span className="block text-xs text-muted-foreground">
+                        <Timestamp value={entry.createdAt} locale={locale} />
+                        {entry.bundled ? " · in this payout" : null}
+                        {entry.reversed ? " · removed" : null}
+                      </span>
                     </span>
-                  </span>
-                  <span className={entry.amountCents < 0 ? "text-primary" : "text-acceptance"}>
-                    {entry.amountCents >= 0 ? "+" : ""}
-                    {formatUsdCents(entry.amountCents)}
-                  </span>
-                </div>
-              ))}
+                    <span className="flex items-center gap-3">
+                      <span className={entry.amountCents < 0 ? "text-primary" : "text-acceptance"}>
+                        {entry.amountCents >= 0 ? "+" : ""}
+                        {formatUsdCents(entry.amountCents)}
+                      </span>
+                      {removable ? (
+                        <RemoveAdjustmentButton
+                          userId={ambassadorId}
+                          eventId={entry.id}
+                          confirmationMessage={`Remove this ${formatUsdCents(entry.amountCents)} adjustment? It comes back out of their balance and out of this payout.`}
+                        />
+                      ) : null}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           ) : null}
 
           {isPending ? (
-            <form
-              action={`/api/admin/users/${ambassadorId}/balance`}
-              method="POST"
-              className="mt-8 grid max-w-md gap-3"
-            >
-              <input type="hidden" name="redirectTo" value={redirectTo} />
-              <input type="hidden" name="payoutId" value={id} />
-              <label className="block text-sm text-secondary">
-                Amount in USD (negative to deduct)
-                <input name="amountUsd" type="number" step="0.01" required placeholder="-5.00" className={fieldClass} />
-              </label>
-              <label className="block text-sm text-secondary">
-                Reason (internal)
-                <input name="note" type="text" required placeholder="Why" className={fieldClass} />
-              </label>
-              <label className="block text-sm text-secondary">
-                Note for ambassador (optional)
-                <input name="publicNote" type="text" placeholder="Shown to them" className={fieldClass} />
-              </label>
-              <button className={cn(buttonVariants({ variant: "default", size: "app-sm" }), "justify-self-start")}>
-                Adjust balance
-              </button>
-            </form>
+            <BalanceAdjustForm
+              userId={ambassadorId}
+              payoutId={id}
+              bundles={breakdown.bundlesAdjustments}
+            />
           ) : null}
         </section>
         ) : null}

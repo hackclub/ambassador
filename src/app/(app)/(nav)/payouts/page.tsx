@@ -10,7 +10,6 @@ import {
   isUsAmbassador,
   listBalanceTransactionsForUser,
   listPayoutsForUser,
-  MIN_AMBASSADOR_PAYOUT_CENTS,
   PAYOUT_STATUS_APPROVED,
   PAYOUT_STATUS_PENDING,
   PAYOUT_STATUS_REJECTED,
@@ -95,9 +94,7 @@ export default async function PayoutsPage({
           <p className="text-5xl font-bold text-acceptance tabular-nums">{formatUsdCents(balance.balanceCents)}</p>
           <p className="mt-4 max-w-prose font-body text-base text-muted-foreground">
             You earn $1.00 for every verified poster and $0.50 for every verified referral.{" "}
-            {canSubmit
-              ? `Request a payout once you reach ${formatUsdCents(MIN_AMBASSADOR_PAYOUT_CENTS)}.`
-              : "Payout requests open soon."}
+            {canSubmit ? "Request a payout whenever you like." : "Payout requests open soon."}
           </p>
         </header>
 
@@ -120,10 +117,9 @@ export default async function PayoutsPage({
                   open, you&rsquo;ll cash out the full amount right here.
                 </p>
               </div>
-            ) : balance.balanceCents < MIN_AMBASSADOR_PAYOUT_CENTS ? (
+            ) : balance.balanceCents <= 0 ? (
               <p className="font-body text-base text-muted-foreground">
-                You need at least {formatUsdCents(MIN_AMBASSADOR_PAYOUT_CENTS)} to request a payout.
-                Keep placing posters!
+                You don&rsquo;t have a balance to cash out yet. Keep placing posters!
               </p>
             ) : (
               <>

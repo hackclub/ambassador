@@ -23,6 +23,7 @@ const EVENT_LABELS: Record<AdminActionEvent, string> = {
   poster_approved_by_admin: "Poster proof approved",
   referral_status_updated_by_admin: "Referral status updated",
   payout_balance_adjusted: "Balance manually adjusted",
+  payout_balance_adjustment_removed: "Balance adjustment removed",
   payout_created_via_impersonation: "Payout created while impersonating",
   payout_invoice_downloaded: "Payout invoice downloaded",
   payout_manual_created: "Manual payout created",
@@ -164,7 +165,17 @@ export function formatAuditEventSummary(event: AuditEventLike): string {
     case "payout_balance_adjusted":
       return joinSentenceParts(
         `Adjusted balance by ${formatMetadataValue(metadata.amountCents)} cents.`,
+        metadata.bundled === true
+          ? `Bundled into pending payout ${formatMetadataValue(metadata.payoutId)}.`
+          : null,
         metadata.reason ? `Reason: ${formatMetadataValue(metadata.reason)}.` : null,
+      );
+    case "payout_balance_adjustment_removed":
+      return joinSentenceParts(
+        `Removed a balance adjustment worth ${formatMetadataValue(metadata.amountCents)} cents.`,
+        metadata.bundled === true
+          ? `Taken back out of pending payout ${formatMetadataValue(metadata.payoutId)}.`
+          : null,
       );
     case "payout_created_via_impersonation":
       return `Created payout ${formatMetadataValue(metadata.payoutId)} for ${formatMetadataValue(metadata.amountCents)} cents while impersonating this user.`;

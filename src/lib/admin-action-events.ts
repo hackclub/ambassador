@@ -15,6 +15,7 @@ export type AdminActionEvent =
   | "poster_approved_by_admin"
   | "referral_status_updated_by_admin"
   | "payout_balance_adjusted"
+  | "payout_balance_adjustment_removed"
   | "payout_created_via_impersonation"
   | "payout_invoice_downloaded"
   | "payout_manual_created"

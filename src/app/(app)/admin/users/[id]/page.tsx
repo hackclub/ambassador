@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { AdminLocalDateTime } from "@/components/admin/admin-local-time";
 import { ApproveWithGrantForm } from "@/components/admin/approve-with-grant-form";
+import { BalanceAdjustForm, RemoveAdjustmentButton } from "@/components/admin/balance-adjust-form";
 import { ConfirmSubmitForm } from "@/components/admin/confirm-submit-form";
 import { DetailDateRow, DetailFieldRow, DetailPager, DetailRow, DetailSection } from "@/components/admin/detail";
 import { ExpandableImage } from "@/components/admin/expandable-image";
@@ -37,6 +38,7 @@ import {
 import { getCachedHackatimeTrustLevel } from "@/lib/hackatime";
 import { formatPosterLabel } from "@/lib/posters/format";
 import { loadPosterPlacementsForUser } from "@/lib/posters/map-points";
+import { formatUsdCents, getUserBalanceAdmin } from "@/lib/payouts/service";
 import { getPosterProofUrl } from "@/lib/posters/storage";
 import { readHcaAccessToken } from "@/lib/hca-access-token";
 import { ensureUserAddressSchema } from "@/lib/database/user-address-schema";
@@ -262,6 +264,7 @@ export default async function AdminUserDetailPage({
     referralCounts,
     referralList,
     posterPlacements,
+    balance,
   ] = await Promise.all([
     sql<ApplicationListRow[]>`
       SELECT id, status, name, date_of_birth, decision_note, created_at, updated_at
@@ -372,6 +375,7 @@ export default async function AdminUserDetailPage({
       OFFSET ${(referralsPage - 1) * REFERRALS_PER_PAGE}
     `,
     loadPosterPlacementsForUser(user.id),
+    getUserBalanceAdmin(user.id),
   ]);
   const currentUserNote =
     typeof latestNoteEvent?.note === "string" && latestNoteEvent.note.trim().length > 0
@@ -854,6 +858,77 @@ export default async function AdminUserDetailPage({
               Link grant
             </button>
           </ConfirmSubmitForm>
+        </DetailSection>
+      </div>
+
+      <div id="balance">
+        <DetailSection
+          title="Balance"
+          description="Adjust the ambassador's payout balance by hand. Money added here sits in the balance and rolls into whatever they request next; to pay it out with a payout they have already requested, adjust it from that payout instead."
+        >
+          <DetailFieldRow label="Current balance" value={formatUsdCents(balance.balanceCents)} />
+          {balance.reservedCents > 0 ? (
+            <DetailRow label="Bundled in a pending payout">
+              <div className="font-body text-base text-foreground">
+                {formatUsdCents(balance.reservedCents)}
+                {balance.pendingPayoutId !== null ? (
+                  <>
+                    {" "}
+                    <Link
+                      href={`/admin/payouts/${balance.pendingPayoutId}`}
+                      className="ui-open-link"
+                    >
+                      Review it
+                    </Link>
+                  </>
+                ) : null}
+                <span className="block text-sm text-secondary">
+                  A deduction can&rsquo;t dip below this. Take it off the payout first.
+                </span>
+              </div>
+            </DetailRow>
+          ) : null}
+
+          {balance.adjustments.length > 0 ? (
+            <DetailRow label="Recent adjustments">
+              <div className="space-y-2">
+                {balance.adjustments.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between gap-3 font-body text-sm"
+                  >
+                    <span className="text-foreground">
+                      {entry.note ?? entry.publicNote ?? "Manual adjustment"}
+                      <span className="block text-xs text-muted-foreground">
+                        <Timestamp value={entry.createdAt} locale={locale} />
+                        {entry.payoutId !== null ? " · bundled in a payout" : null}
+                        {entry.reversed ? " · removed" : null}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className={entry.amountCents < 0 ? "text-primary" : "text-acceptance"}>
+                        {entry.amountCents >= 0 ? "+" : ""}
+                        {formatUsdCents(entry.amountCents)}
+                      </span>
+                      {!entry.isReversal && !entry.reversed ? (
+                        <RemoveAdjustmentButton
+                          userId={user.id}
+                          eventId={entry.id}
+                          confirmationMessage={
+                            entry.payoutId !== null
+                              ? `Remove this ${formatUsdCents(entry.amountCents)} adjustment? It comes back out of their balance and out of the payout it was bundled into.`
+                              : `Remove this ${formatUsdCents(entry.amountCents)} adjustment from their balance?`
+                          }
+                        />
+                      ) : null}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </DetailRow>
+          ) : null}
+
+          <BalanceAdjustForm userId={user.id} />
         </DetailSection>
       </div>
 

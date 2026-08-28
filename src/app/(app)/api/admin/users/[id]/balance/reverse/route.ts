@@ -7,21 +7,16 @@ import {
   payoutErrorResponse,
   requireAdminActorSession,
 } from "@/lib/payouts/http";
-import {
-  adjustUserBalance,
-  parseAdminComment,
-  parseBalanceAdjustmentCents,
-  parseBalanceAdjustmentUsd,
-  parseRequiredReason,
-} from "@/lib/payouts/service";
+import { PayoutRequestError, reverseBalanceAdjustment } from "@/lib/payouts/service";
 
 export const runtime = "nodejs";
 
-// Manual balance adjustment. Used both by the admin UI (form post, redirects
-// back) and programmatically for meetup payouts (JSON, returns the new balance).
+// Remove a manual balance adjustment. The ledger event stays; an opposite one
+// is written against it, and if the adjustment was bundled into a pending
+// payout that payout's total comes back down too.
 export async function POST(
   request: Request,
-  context: RouteContext<"/api/admin/users/[id]/balance">,
+  context: RouteContext<"/api/admin/users/[id]/balance/reverse">,
 ) {
   if (!isSameOriginRequest(request)) {
     return Response.json({ error: "forbidden" }, { status: 403 });
@@ -32,33 +27,26 @@ export async function POST(
     const { id } = await context.params;
     const { data, isForm } = await readJsonOrForm(request);
 
-    // The admin UI posts dollars; programmatic callers (meetup script) send cents.
-    const amountCents =
-      data.amountUsd !== undefined && data.amountUsd !== null && data.amountUsd !== ""
-        ? parseBalanceAdjustmentUsd(data.amountUsd)
-        : parseBalanceAdjustmentCents(data.amountCents);
-    const note = parseRequiredReason(data.note ?? data.reason, "reason");
-    const publicNote = parseAdminComment(data.publicNote);
+    const eventId = typeof data.eventId === "string" ? data.eventId.trim() : "";
+    if (eventId === "") {
+      throw new PayoutRequestError("invalid_event", 400);
+    }
 
-    const result = await adjustUserBalance({
+    const result = await reverseBalanceAdjustment({
+      eventId,
       userId: id,
       adminUserId: session.sub,
-      amountCents,
-      note,
-      publicNote,
-      payoutId: typeof data.payoutId === "string" && data.payoutId !== "" ? data.payoutId : null,
     });
 
     await logAdminActionEvent({
       actorUserId: session.sub,
       targetUserId: id,
-      action: "payout_balance_adjusted",
+      action: "payout_balance_adjustment_removed",
       metadata: {
-        amountCents,
+        eventId,
+        // The reversal's own amount, so this reads as the money that moved.
+        amountCents: result.amountCents,
         balanceAfterCents: result.balanceCents,
-        reason: note,
-        publicNote: publicNote ?? null,
-        // A bundled adjustment also moved the pending payout's total.
         payoutId: result.payoutId,
         bundled: result.bundled,
         payoutAmountCents: result.payoutAmountCents,

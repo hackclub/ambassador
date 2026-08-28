@@ -9,7 +9,6 @@ import {
 import {
   createPayoutForUser,
   listPayoutsForUser,
-  MIN_AMBASSADOR_PAYOUT_CENTS,
   parseCreatePayoutPayload,
 } from "@/lib/payouts/service";
 import { checkRateLimit, getRateLimitKey, rateLimitResponse } from "@/lib/rate-limit";
@@ -50,7 +49,6 @@ export async function POST(request: Request) {
       userId: session.sub,
       bankInfo: parsed.bankInfo,
       ambassadorNotes: parsed.ambassadorNotes,
-      minimumAmountCents: MIN_AMBASSADOR_PAYOUT_CENTS,
     });
 
     // A payout created through the user-facing route while an admin is
