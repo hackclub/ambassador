@@ -22,6 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  addPendingPosterCapture,
+  removePendingPosterCapture,
+  type PendingPosterCapture,
+} from "@/lib/offline/poster-capture-queue";
+import { useOnlineStatus } from "@/lib/offline/use-online-status";
+import { usePendingPosterCaptures } from "@/lib/offline/use-pending-poster-captures";
 import type { PosterCampaignSummary } from "@/lib/posters/config";
 import {
   MAX_GROUPS_PER_USER,
@@ -480,6 +487,50 @@ export function PostersClient({
     await refresh();
   }, [refresh]);
 
+  const isOnline = useOnlineStatus();
+  const { captures: pendingCaptures, refresh: refreshPendingCaptures } = usePendingPosterCaptures();
+  const [uploadingCaptures, setUploadingCaptures] = useState(false);
+  const [captureUploadNote, setCaptureUploadNote] = useState<string | null>(null);
+
+  const uploadPendingCaptures = useCallback(async () => {
+    setUploadingCaptures(true);
+    setCaptureUploadNote(null);
+    let verified = 0;
+    let unmatched = 0;
+    let stillPending = 0;
+    for (const capture of pendingCaptures) {
+      let response: Response;
+      try {
+        const formData = new FormData();
+        formData.append("proof", new File([capture.blob], capture.fileName, { type: capture.mimeType }));
+        formData.append("latitude", String(capture.latitude));
+        formData.append("longitude", String(capture.longitude));
+        formData.append("locationAccuracy", String(capture.accuracy));
+        response = await fetch("/api/posters/scan", { method: "POST", body: formData });
+      } catch {
+        stillPending += 1;
+        continue;
+      }
+      if (!response.ok) {
+        stillPending += 1;
+        continue;
+      }
+      const data = (await response.json().catch(() => null)) as { status?: string } | null;
+      await removePendingPosterCapture(capture.id);
+      if (data?.status === "no_qr" || data?.status === "no_match") {
+        unmatched += 1;
+      } else {
+        verified += 1;
+      }
+    }
+    refreshPendingCaptures();
+    if (verified > 0) await refresh();
+    setCaptureUploadNote(
+      t("offline.upload-summary", { verified, unmatched, pending: stillPending }).trim(),
+    );
+    setUploadingCaptures(false);
+  }, [pendingCaptures, refresh, refreshPendingCaptures, t]);
+
   const allPosters = [
     ...data.standalonePosters,
     ...data.groups.flatMap((g) => g.posters),
@@ -546,6 +597,17 @@ export function PostersClient({
     <PosterDragContext.Provider value={dragContextValue}>
     <div className="space-y-12">
       {error !== null ? <ErrorBanner message={error} onDismiss={() => setError(null)} /> : null}
+
+      {pendingCaptures.length > 0 && (
+        <PendingCapturesPanel
+          captures={pendingCaptures}
+          isOnline={isOnline}
+          uploading={uploadingCaptures}
+          note={captureUploadNote}
+          onUpload={() => void uploadPendingCaptures()}
+          onRemove={(id) => void removePendingPosterCapture(id).then(refreshPendingCaptures)}
+        />
+      )}
 
       {pendingPosters.length > 0 && (
         <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -679,6 +741,94 @@ function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () =>
         ✕
       </button>
     </div>
+  );
+}
+
+/** Object URLs for offline-queued capture thumbnails, revoked whenever the queue changes. */
+function useCaptureThumbnails(captures: PendingPosterCapture[]) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    for (const capture of captures) {
+      next[capture.id] = URL.createObjectURL(capture.blob);
+    }
+    setUrls(next);
+    return () => {
+      Object.values(next).forEach((url) => URL.revokeObjectURL(url));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [captures.map((c) => c.id).join(",")]);
+
+  return urls;
+}
+
+/**
+ * Photos captured offline (no network at the time) sit here until the user
+ * is back online and taps "Upload now" — nothing uploads automatically so a
+ * flaky connection can't silently retry in the background.
+ */
+function PendingCapturesPanel({
+  captures,
+  isOnline,
+  uploading,
+  note,
+  onUpload,
+  onRemove,
+}: {
+  captures: PendingPosterCapture[];
+  isOnline: boolean;
+  uploading: boolean;
+  note: string | null;
+  onUpload: () => void;
+  onRemove: (id: string) => void;
+}) {
+  const t = useTranslations("posters");
+  const previewUrls = useCaptureThumbnails(captures);
+
+  return (
+    <section className="ui-group space-y-4 border-accent/40">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="font-sub text-lg text-foreground">
+            {t("offline.pending-title", { count: captures.length })}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {isOnline ? t("offline.pending-body-online") : t("offline.pending-body-offline")}
+          </p>
+        </div>
+        <Button
+          size="app-sm"
+          className="self-start sm:self-auto"
+          onClick={onUpload}
+          disabled={uploading || !isOnline}
+        >
+          {uploading ? t("offline.uploading") : t("offline.upload-now")}
+        </Button>
+      </div>
+      {note !== null && <p className="text-sm text-muted-foreground">{note}</p>}
+      <ul className="flex flex-wrap gap-3">
+        {captures.map((capture) => (
+          <li
+            key={capture.id}
+            className="relative size-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted"
+          >
+            {previewUrls[capture.id] ? (
+              <Image src={previewUrls[capture.id]} alt="" fill unoptimized className="object-cover" />
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onRemove(capture.id)}
+              aria-label={t("offline.remove-capture")}
+              title={t("offline.remove-capture")}
+              className="absolute right-1 top-1 inline-flex size-6 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+            >
+              <Trash2 size={13} />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -859,7 +1009,7 @@ function GroupCard({
             }}
             aria-label={t("actions.rename-group", { name: displayName })}
             title={t("actions.rename-group", { name: displayName })}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 bg-transparent p-0 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 bg-transparent px-1 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <Pencil size={16} />
             <span className="hidden sm:inline">{t("actions.rename")}</span>
@@ -872,7 +1022,7 @@ function GroupCard({
               disabled={deleteBusy}
               aria-label={t("actions.delete-group", { name: displayName })}
               title={t("actions.delete-group", { name: displayName })}
-              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 bg-transparent p-0 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 bg-transparent px-1 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trash2 size={16} />
               <span className="hidden sm:inline">{t("actions.delete")}</span>
@@ -898,7 +1048,7 @@ function GroupCard({
               onBlur={(event) => setAddCountInput(String(clampPosterAddCountInput(event.currentTarget.value, remaining)))}
               aria-invalid={addCountNeedsCorrection ? "true" : "false"}
               aria-describedby={`group-add-count-help-${group.id}`}
-              className="w-full"
+              className="h-10 w-full"
             />
             <p
               id={`group-add-count-help-${group.id}`}
@@ -1336,7 +1486,7 @@ function PosterTreeItem({
             <a
               href={`/api/posters/${poster.id}/pdf`}
               data-slot="icon-link"
-              className="inline-flex size-7 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex size-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
               aria-label={`Download poster ${displayCode}`}
               title={`Download poster ${displayCode}`}
             >
@@ -1350,7 +1500,7 @@ function PosterTreeItem({
                 setEditing(true);
                 setRowError(null);
               }}
-              className="inline-flex size-7 cursor-pointer items-center justify-center bg-transparent p-0 text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex size-9 cursor-pointer items-center justify-center bg-transparent p-0 text-muted-foreground transition-colors hover:text-foreground"
               aria-label={t("actions.rename-poster", { code: displayCode })}
               title={t("actions.rename-poster", { code: displayCode })}
             >
@@ -1362,7 +1512,7 @@ function PosterTreeItem({
                 data-slot="icon-link"
                 onClick={() => void deletePoster()}
                 disabled={busy}
-                className="inline-flex size-7 cursor-pointer items-center justify-center bg-transparent p-0 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex size-9 cursor-pointer items-center justify-center bg-transparent p-0 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={t("actions.delete-poster", { code: displayCode })}
                 title={t("actions.delete-poster", { code: displayCode })}
               >
@@ -1515,7 +1665,7 @@ function PosterRow({
             data-slot="icon-link"
             aria-label={`Download poster ${displayCode}`}
             title={`Download poster ${displayCode}`}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 px-1 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <Icon glyph="download" size={20} />
             <span className="hidden sm:inline">{t("actions.download")}</span>
@@ -1528,7 +1678,7 @@ function PosterRow({
               setEditing(true);
               setRowError(null);
             }}
-            className="inline-flex cursor-pointer items-center gap-1.5 bg-transparent p-0 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="inline-flex cursor-pointer items-center gap-1.5 bg-transparent px-1 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             aria-label={t("actions.rename-poster", { code: displayCode })}
             title={t("actions.rename-poster", { code: displayCode })}
           >
@@ -1543,7 +1693,7 @@ function PosterRow({
               disabled={busy}
               aria-label={t("actions.delete-poster", { code: displayCode })}
               title={t("actions.delete-poster", { code: displayCode })}
-              className="inline-flex cursor-pointer items-center gap-1.5 bg-transparent p-0 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex cursor-pointer items-center gap-1.5 bg-transparent px-1 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trash2 size={16} />
               <span className="hidden sm:inline">{t("actions.delete")}</span>
@@ -1725,7 +1875,7 @@ function CreateSection({
                     onBlur={(event) => setGroupSizeInput(String(clampGroupSizeInput(event.currentTarget.value)))}
                     aria-invalid={groupSizeNeedsCorrection ? "true" : "false"}
                     aria-describedby="group-size-help"
-                    className="w-full"
+                    className="h-10 w-full"
                   />
                   <p
                     id="group-size-help"
@@ -1962,9 +2112,32 @@ function VerifyModal({
 }) {
   const t = useTranslations("posters");
   const { state: geoState, start: retryGeo } = useGeolocation(true);
+  const isOnline = useOnlineStatus();
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [savedOffline, setSavedOffline] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const saveCaptureOffline = useCallback(
+    async (nextFile: File, geo: { latitude: number; longitude: number; accuracy: number }) => {
+      try {
+        await addPendingPosterCapture({
+          blob: nextFile,
+          fileName: nextFile.name,
+          mimeType: nextFile.type || "image/jpeg",
+          latitude: geo.latitude,
+          longitude: geo.longitude,
+          accuracy: geo.accuracy,
+        });
+        setSavedOffline(true);
+      } catch {
+        setError(t("errors.upload-failed"));
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [t],
+  );
 
   const handleCapture = useCallback(
     async (nextFile: File | null) => {
@@ -1979,14 +2152,29 @@ function VerifyModal({
       }
       setError(null);
       setSubmitting(true);
+      const geo = geoState;
+
+      if (!isOnline) {
+        await saveCaptureOffline(nextFile, geo);
+        return;
+      }
+
+      let response: Response;
       try {
         const formData = new FormData();
         formData.append("proof", nextFile);
-        formData.append("latitude", String(geoState.latitude));
-        formData.append("longitude", String(geoState.longitude));
-        formData.append("locationAccuracy", String(geoState.accuracy));
+        formData.append("latitude", String(geo.latitude));
+        formData.append("longitude", String(geo.longitude));
+        formData.append("locationAccuracy", String(geo.accuracy));
+        response = await fetch("/api/posters/scan", { method: "POST", body: formData });
+      } catch {
+        // The request never reached the server (offline / connection dropped
+        // mid-flight) — queue the photo instead of losing it.
+        await saveCaptureOffline(nextFile, geo);
+        return;
+      }
 
-        const response = await fetch("/api/posters/scan", { method: "POST", body: formData });
+      try {
         const data = await response.json().catch(() => null);
         const payload: Record<string, unknown> | null =
           typeof data === "object" && data !== null && !Array.isArray(data)
@@ -2042,11 +2230,11 @@ function VerifyModal({
         setSubmitting(false);
       }
     },
-    [geoState, t],
+    [geoState, isOnline, saveCaptureOffline, t],
   );
 
   const step: "location" | "capture" | "processing" | "done" =
-    result !== null
+    result !== null || savedOffline
       ? "done"
       : submitting
         ? "processing"
@@ -2089,7 +2277,9 @@ function VerifyModal({
         )}
 
         <div className="flex-1 overflow-y-auto px-5 py-5 sm:py-6">
-          {result ? (
+          {savedOffline ? (
+            <OfflineSavedView />
+          ) : result ? (
             <ResultView result={result} />
           ) : submitting ? (
             <ProcessingView />
@@ -2099,17 +2289,19 @@ function VerifyModal({
             <CaptureStep
               onCapture={handleCapture}
               error={error}
+              isOnline={isOnline}
             />
           )}
         </div>
 
-        {result !== null && (
+        {(result !== null || savedOffline) && (
           <div className="border-t border-white/5 px-5 pb-5 pt-3 sm:pb-6">
             <Button
               size="app"
               className="w-full"
               onClick={() => {
                 setResult(null);
+                setSavedOffline(false);
                 onDone();
               }}
             >
@@ -2166,9 +2358,11 @@ function LocationStep({ state, onRetry }: { state: GeoState; onRetry: () => void
 function CaptureStep({
   onCapture,
   error,
+  isOnline,
 }: {
   onCapture: (file: File) => void;
   error: string | null;
+  isOnline: boolean;
 }) {
   const t = useTranslations("posters");
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -2275,6 +2469,12 @@ function CaptureStep({
         </p>
       </div>
 
+      {!isOnline && (
+        <p className="rounded-lg bg-white/10 px-3 py-2 text-xs leading-relaxed text-[color:#ffffffcc]">
+          {t("offline.capture-hint")}
+        </p>
+      )}
+
       <div className="relative overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
         <video
           ref={videoRef}
@@ -2342,6 +2542,21 @@ function ProcessingView() {
       <div className="space-y-1">
         <p className="font-sub text-lg text-[#fff]">Reading the QR code…</p>
         <p className="text-sm text-[color:#ffffff99]">This usually takes a second.</p>
+      </div>
+    </div>
+  );
+}
+
+function OfflineSavedView() {
+  const t = useTranslations("posters");
+  return (
+    <div className="flex flex-col items-start gap-3 py-2 text-left">
+      <span className="inline-flex text-[#ffbf71]">
+        <Icon glyph="clock-fill" size={36} />
+      </span>
+      <div className="space-y-1">
+        <p className="font-sub text-xl text-[#fff]">{t("offline.saved-title")}</p>
+        <p className="text-sm leading-relaxed text-[color:#ffffff99]">{t("offline.saved-body")}</p>
       </div>
     </div>
   );
