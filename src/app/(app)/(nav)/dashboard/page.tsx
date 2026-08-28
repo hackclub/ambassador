@@ -5,6 +5,7 @@ import { useId, type ComponentProps, type ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { DevAdminSelector } from "@/components/dev-admin-selector";
+import { StardanceExpeditionsSection } from "@/components/stardance-expeditions-section";
 import { buttonVariants } from "@/components/ui/button";
 import { getTranslatedPageMetadata } from "@/i18n/metadata";
 import {
@@ -30,6 +31,11 @@ import { loadUserHackClubAddresses } from "@/lib/hca-addresses";
 import { readHcaAccessToken } from "@/lib/hca-access-token";
 import { getEffectiveSafeguards } from "@/lib/safeguards";
 import { getSession } from "@/lib/session";
+import {
+  listAmbassadorExpeditions,
+  type AmbassadorExpedition,
+} from "@/lib/expeditions";
+import { hasApprovedAmbassadorStatus } from "@/lib/posters/access";
 import { canAccessShirts } from "@/lib/shirt/access";
 import {
   formatHackClubAddress,
@@ -84,6 +90,7 @@ type ApplicationRow = {
 type UserRow = {
   balance_cents: number | null;
   is_admin: boolean | null;
+  slack_id: string | null;
   ambassador_region: string | null;
   hca_country: string | null;
   country_name: string | null;
@@ -127,7 +134,7 @@ export default async function DashboardPage({
   ]);
 
   const dashboardRow = (await sql<DashboardRow[]>`
-    SELECT u.balance_cents, u.is_admin, u.ambassador_region, u.hca_country,
+    SELECT u.balance_cents, u.is_admin, u.slack_id, u.ambassador_region, u.hca_country,
            u.country_name, u.country_code, u.hca_addresses, u.hca_access_token,
            u.manual_dashboard_state,
            latest_application.status AS application_status,
@@ -167,6 +174,7 @@ export default async function DashboardPage({
   const user: UserRow = {
     balance_cents: dashboardRow.balance_cents,
     is_admin: dashboardRow.is_admin,
+    slack_id: dashboardRow.slack_id,
     ambassador_region: dashboardRow.ambassador_region,
     hca_country: dashboardRow.hca_country,
     country_name: dashboardRow.country_name,
@@ -274,6 +282,21 @@ export default async function DashboardPage({
     onboardingFormUrl: "https://forms.hackclub.com/t/mJvXsYY41Lus",
     stockBySize: shirtStockBySize,
   };
+  const stardanceSlackId = user.slack_id ?? session.slackId ?? null;
+  const canSubmitStardanceExpeditions =
+    stardanceSlackId !== null &&
+    (canAccessAdmin ||
+      hasApprovedAmbassadorStatus({
+        latestApplicationStatus: application?.status ?? null,
+        manualDashboardState: user.manual_dashboard_state,
+      }));
+  const stardanceExpeditions =
+    canSubmitStardanceExpeditions && stardanceSlackId !== null
+      ? await listAmbassadorExpeditions(stardanceSlackId).catch((error) => {
+          console.error("[stardance] unable to load ambassador expeditions", error);
+          return [] as AmbassadorExpedition[];
+        })
+      : [];
 
   const stateInput = {
     application,
@@ -285,6 +308,8 @@ export default async function DashboardPage({
     officeGrant,
     canUseShirts,
     onboardingEnabled: safeguards.onboardingEnabled,
+    stardanceExpeditions,
+    canSubmitStardanceExpeditions,
   };
   const baseResolved = resolveState({ ...stateInput, activeDevState: null });
   const selectedDevState = devState !== undefined && isDevState(devState) ? devState : null;
@@ -364,6 +389,8 @@ function resolveState({
   canUseShirts,
   onboardingEnabled,
   officeGrant,
+  stardanceExpeditions,
+  canSubmitStardanceExpeditions,
 }: {
   activeDevState: DevState | null;
   application: { status: string; created_at: string } | null;
@@ -383,6 +410,8 @@ function resolveState({
   officeGrant: OfficeGrantRecord | null;
   canUseShirts: boolean;
   onboardingEnabled: boolean;
+  stardanceExpeditions: AmbassadorExpedition[];
+  canSubmitStardanceExpeditions: boolean;
 }): ResolvedState {
   const devFailedOfficeGrant: OfficeGrantRecord = {
     id: "dev-failed-office-grant",
@@ -467,9 +496,11 @@ function resolveState({
       node: (
         <ApprovedDashboardContent
           canUseShirts={canUseShirts}
+          canSubmitStardanceExpeditions={canSubmitStardanceExpeditions}
           officeGrant={officeGrant}
           onboardingEnabled={onboardingEnabled}
           shirt={shirt}
+          stardanceExpeditions={stardanceExpeditions}
           t={t}
         />
       ),
@@ -481,6 +512,7 @@ function resolveState({
       node: (
         <ApprovedDashboardContent
           canUseShirts={canUseShirts}
+          canSubmitStardanceExpeditions={canSubmitStardanceExpeditions}
           officeGrant={officeGrant}
           onboardingEnabled={onboardingEnabled}
           shirt={{
@@ -488,6 +520,7 @@ function resolveState({
             requiresOnboarding: true,
             onboardingStatus: AMBASSADOR_ONBOARDING_STATUS.unsubmitted,
           }}
+          stardanceExpeditions={stardanceExpeditions}
           t={t}
         />
       ),
@@ -499,6 +532,7 @@ function resolveState({
       node: (
         <ApprovedDashboardContent
           canUseShirts={canUseShirts}
+          canSubmitStardanceExpeditions={canSubmitStardanceExpeditions}
           officeGrant={officeGrant}
           onboardingEnabled={onboardingEnabled}
           shirt={{
@@ -506,6 +540,7 @@ function resolveState({
             requiresOnboarding: true,
             onboardingStatus: AMBASSADOR_ONBOARDING_STATUS.submitted,
           }}
+          stardanceExpeditions={stardanceExpeditions}
           t={t}
         />
       ),
@@ -517,6 +552,7 @@ function resolveState({
       node: (
         <ApprovedDashboardContent
           canUseShirts={canUseShirts}
+          canSubmitStardanceExpeditions={canSubmitStardanceExpeditions}
           officeGrant={officeGrant}
           onboardingEnabled={onboardingEnabled}
           shirt={{
@@ -524,6 +560,7 @@ function resolveState({
             requiresOnboarding: true,
             onboardingStatus: AMBASSADOR_ONBOARDING_STATUS.pendingSignature,
           }}
+          stardanceExpeditions={stardanceExpeditions}
           t={t}
         />
       ),
@@ -535,13 +572,16 @@ function resolveState({
       node: (
         <ApprovedDashboardContent
           canUseShirts={canUseShirts}
+          canSubmitStardanceExpeditions={canSubmitStardanceExpeditions}
           officeGrant={officeGrant}
           onboardingEnabled={onboardingEnabled}
           shirt={{
             ...shirt,
+            needsAddressRefresh: false,
             requiresOnboarding: false,
             onboardingStatus: AMBASSADOR_ONBOARDING_STATUS.completed,
           }}
+          stardanceExpeditions={stardanceExpeditions}
           t={t}
         />
       ),
@@ -553,9 +593,11 @@ function resolveState({
       node: (
         <ApprovedDashboardContent
           canUseShirts={canUseShirts}
+          canSubmitStardanceExpeditions={canSubmitStardanceExpeditions}
           officeGrant={devFailedOfficeGrant}
           onboardingEnabled={onboardingEnabled}
           shirt={{ ...shirt, requiresOnboarding: false }}
+          stardanceExpeditions={stardanceExpeditions}
           t={t}
         />
       ),
@@ -657,15 +699,19 @@ function resolveState({
 
 function ApprovedDashboardContent({
   canUseShirts,
+  canSubmitStardanceExpeditions,
   officeGrant,
   onboardingEnabled,
   shirt,
+  stardanceExpeditions,
   t,
 }: {
   canUseShirts: boolean;
+  canSubmitStardanceExpeditions: boolean;
   officeGrant: OfficeGrantRecord | null;
   onboardingEnabled: boolean;
   shirt: ShirtOrderSectionProps;
+  stardanceExpeditions: AmbassadorExpedition[];
   t: DashboardTranslations;
 }) {
   return (
@@ -682,6 +728,10 @@ function ApprovedDashboardContent({
         <div className="space-y-8">
           <OfficeGrantSection officeGrant={officeGrant} t={t} />
           {canUseShirts ? <ShirtOrderSection {...shirt} /> : null}
+          <StardanceExpeditionsSection
+            canSubmit={canSubmitStardanceExpeditions}
+            initialExpeditions={stardanceExpeditions}
+          />
         </div>
       )}
     </div>

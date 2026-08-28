@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import { type AirtableRecord, createAirtableClient } from "@/lib/airtable";
 import {
   type AmbassadorFieldKey,
@@ -10,6 +12,8 @@ import {
   getAirtableFieldValue,
   getAirtableTableId,
 } from "@/lib/airtable-schema";
+import sql from "@/lib/database/client";
+import { hasApprovedAmbassadorStatus } from "@/lib/posters/access";
 
 export type Expedition = {
   id: string;
@@ -33,6 +37,41 @@ export type Expedition = {
   googleMapsUrl: string | null;
   appleMapsUrl: string | null;
   participantSlackIds: string[];
+};
+
+export type AmbassadorExpedition = Pick<
+  Expedition,
+  | "id"
+  | "name"
+  | "prettyName"
+  | "slug"
+  | "date"
+  | "concluded"
+  | "venue"
+  | "latitude"
+  | "longitude"
+  | "channelId"
+  | "ambassadorSlackId"
+  | "ambassadorName"
+  | "googleMapsUrl"
+  | "appleMapsUrl"
+  | "participantSlackIds"
+> & {
+  status: string | null;
+};
+
+export type CreateExpeditionInput = {
+  title: string;
+  startsAt: string;
+  venueName?: string;
+  venueAddress: string;
+  venueCity: string;
+  venueState?: string;
+  venueZip?: string;
+  venueCountry?: string;
+  googleMapsUrl?: string;
+  appleMapsUrl?: string;
+  ambassadorSlackId: string;
 };
 
 function toText(value: unknown): string | null {
@@ -93,7 +132,12 @@ function cached<T>(load: () => Promise<T>) {
 const MEETUP_FIELD_KEYS: MeetupFieldKey[] = [
   "name", "prettyName", "slug", "date", "concluded", "channelId",
   "ambassadorSlackId", "ambassador", "venueName", "venueAddress", "venueCity",
-  "venueState", "venueCountry", "latitude", "longitude", "googleMapsUrl", "appleMapsUrl",
+  "venueState", "venueZip", "venueCountry", "latitude", "longitude", "googleMapsUrl", "appleMapsUrl",
+];
+
+const AMBASSADOR_MEETUP_FIELD_KEYS: MeetupFieldKey[] = [
+  ...MEETUP_FIELD_KEYS,
+  "status",
 ];
 
 async function fetchAmbassadorNames(): Promise<Map<string, string>> {
@@ -185,3 +229,145 @@ async function fetchPublicExpeditions(): Promise<Expedition[]> {
 }
 
 export const listPublicExpeditions = cached(fetchPublicExpeditions);
+
+export async function isApprovedAmbassadorSlackId(slackIdInput: string) {
+  const slackId = slackIdInput.trim();
+  if (slackId === "") return false;
+
+  const row = (await sql<{
+    manual_dashboard_state: string | null;
+    latest_application_status: string | null;
+  }[]>`
+    SELECT
+      users.manual_dashboard_state,
+      latest_application.status AS latest_application_status
+    FROM users
+    LEFT JOIN LATERAL (
+      SELECT status
+      FROM applications
+      WHERE user_id = users.id
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    ) latest_application ON true
+    WHERE users.slack_id = ${slackId}
+    LIMIT 1
+  `).at(0);
+
+  return hasApprovedAmbassadorStatus({
+    latestApplicationStatus: row?.latest_application_status ?? null,
+    manualDashboardState: row?.manual_dashboard_state ?? null,
+  });
+}
+
+function meetupRecordToAmbassadorExpedition(
+  record: AirtableRecord<Record<string, unknown>>,
+  ambassadorNames: Map<string, string>,
+  slackIdsByMeetup: Map<string, string[]>,
+): AmbassadorExpedition {
+  const value = (key: MeetupFieldKey) => getAirtableFieldValue(record.fields, "meetups", key);
+  const ambassadorId = firstLinkedId(value("ambassador"));
+
+  return {
+    id: record.id,
+    name: toText(value("name")),
+    prettyName: toText(value("prettyName")),
+    slug: toText(value("slug")),
+    date: toText(value("date")),
+    concluded: value("concluded") === true,
+    status: toText(value("status")),
+    venue: {
+      name: toText(value("venueName")),
+      address: toText(value("venueAddress")),
+      city: toText(value("venueCity")),
+      state: toText(value("venueState")),
+      country: toText(value("venueCountry")),
+    },
+    latitude: toCoordinate(value("latitude")),
+    longitude: toCoordinate(value("longitude")),
+    channelId: toText(value("channelId")),
+    ambassadorSlackId: toText(value("ambassadorSlackId")),
+    ambassadorName: ambassadorId === null ? null : ambassadorNames.get(ambassadorId) ?? null,
+    googleMapsUrl: toText(value("googleMapsUrl")),
+    appleMapsUrl: toText(value("appleMapsUrl")),
+    participantSlackIds: slackIdsByMeetup.get(record.id) ?? [],
+  };
+}
+
+function airtableStringLiteral(value: string) {
+  return `"${value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}"`;
+}
+
+export async function listAmbassadorExpeditions(
+  ambassadorSlackId: string,
+): Promise<AmbassadorExpedition[]> {
+  const slackId = ambassadorSlackId.trim();
+  if (slackId === "") return [];
+
+  const [records, ambassadorNames, slackIdsByMeetup] = await Promise.all([
+    listAllRecords(getAirtableTableId("meetups"), {
+      filterByFormula: `{${getAirtableFieldName("meetups", "ambassadorSlackId")}} = ${airtableStringLiteral(slackId)}`,
+      fields: AMBASSADOR_MEETUP_FIELD_KEYS.map((key) => getAirtableFieldId("meetups", key)),
+    }),
+    fetchAmbassadorNames(),
+    fetchParticipantSlackIds(),
+  ]);
+
+  return records
+    .map((record) => meetupRecordToAmbassadorExpedition(record, ambassadorNames, slackIdsByMeetup))
+    .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
+}
+
+function requiredText(value: string, fieldName: string) {
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    throw new Error(`${fieldName} is required`);
+  }
+  return trimmed;
+}
+
+function optionalText(value: string | undefined) {
+  const trimmed = value?.trim() ?? "";
+  return trimmed === "" ? undefined : trimmed;
+}
+
+function slugify(input: string) {
+  const slug = input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return `${slug || "expedition"}-${randomUUID().slice(0, 8)}`;
+}
+
+export async function createAmbassadorExpedition(input: CreateExpeditionInput) {
+  const title = requiredText(input.title, "Title");
+  const startsAt = requiredText(input.startsAt, "Date/time");
+  const venueAddress = requiredText(input.venueAddress, "Address");
+  const venueCity = requiredText(input.venueCity, "City");
+  const ambassadorSlackId = requiredText(input.ambassadorSlackId, "Slack ID");
+
+  const client = getClient();
+  const fields = {
+    [getAirtableFieldId("meetups", "name")]: title,
+    [getAirtableFieldId("meetups", "prettyName")]: title,
+    [getAirtableFieldId("meetups", "slug")]: slugify(title),
+    [getAirtableFieldId("meetups", "date")]: startsAt,
+    [getAirtableFieldId("meetups", "status")]: "Pending",
+    [getAirtableFieldId("meetups", "ambassadorSlackId")]: ambassadorSlackId,
+    [getAirtableFieldId("meetups", "venueName")]: optionalText(input.venueName),
+    [getAirtableFieldId("meetups", "venueAddress")]: venueAddress,
+    [getAirtableFieldId("meetups", "venueCity")]: venueCity,
+    [getAirtableFieldId("meetups", "venueState")]: optionalText(input.venueState),
+    [getAirtableFieldId("meetups", "venueZip")]: optionalText(input.venueZip),
+    [getAirtableFieldId("meetups", "venueCountry")]: optionalText(input.venueCountry) ?? "US",
+    [getAirtableFieldId("meetups", "googleMapsUrl")]: optionalText(input.googleMapsUrl),
+    [getAirtableFieldId("meetups", "appleMapsUrl")]: optionalText(input.appleMapsUrl),
+  };
+
+  const record = await client.createRecord<Record<string, unknown>>(
+    getAirtableTableId("meetups"),
+    fields,
+  );
+
+  return meetupRecordToAmbassadorExpedition(record, new Map(), new Map());
+}
